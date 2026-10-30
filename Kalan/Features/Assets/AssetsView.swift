@@ -14,6 +14,10 @@ struct AssetsView: View {
 
     @Query(sort: \AssetHolding.createdAt, order: .reverse)
     private var assets: [AssetHolding]
+    
+    @StateObject private var viewModel = AssetsViewModel()
+
+    @State private var selectedCurrency = "TRY"
 
     @State private var showAddAsset = false
     @State private var selectedAsset: AssetHolding?
@@ -23,6 +27,35 @@ struct AssetsView: View {
 
     @State private var showError = false
     @State private var errorMessage = ""
+    
+    private let supportedCurrencies = [
+        "TRY", "USD", "EUR"
+    ]
+
+    private var currencyTotal: Decimal? {
+
+        let currencyAssets = assets.filter {
+            $0.symbol != "XAU" && $0.symbol != "XAG"
+        }
+
+        guard !currencyAssets.isEmpty else {
+            return nil
+        }
+
+        let values = currencyAssets.compactMap { asset in
+            viewModel.convertedAmount(
+                quantity: asset.quantity,
+                symbol: asset.symbol,
+                targetCurrency: selectedCurrency
+            )
+        }
+
+        guard values.count == currencyAssets.count else {
+            return nil
+        }
+
+        return values.reduce(.zero, +)
+    }
 
     private var preciousMetals: [AssetHolding] {
         assets.filter {
@@ -101,25 +134,83 @@ struct AssetsView: View {
             } message: {
                 Text(errorMessage)
             }
+            .task {
+                await viewModel.fetchPrices()
+            }
         }
     }
 
     private var portfolioSummary: some View {
+
         VStack(alignment: .leading, spacing: 12) {
 
-            Text("Toplam Portföyüm")
+            Text("Portföyüm")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            Text("Henüz hesaplanmadı")
-                .font(.title2.bold())
+            Picker(
+                "Görüntüleme Para Birimi",
+                selection: $selectedCurrency
+            ) {
+                ForEach(supportedCurrencies, id: \.self) { currency in
+                    Text(currency).tag(currency)
+                }
+            }
+            .pickerStyle(.segmented)
 
-            Text(
-                "Güncel piyasa fiyatları eklendiğinde " +
-                "toplam TL karşılığını burada göreceksiniz."
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            if let currencyTotal {
+
+                Text(
+                    viewModel.formattedAmount(
+                        currencyTotal,
+                        currency: selectedCurrency
+                    )
+                )
+                .font(.system(size: 28, weight: .bold))
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+
+                Text("Döviz varlıklarımın toplam değeri")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+            } else {
+
+                Text("Henüz hesaplanmadı")
+                    .font(.title2.bold())
+
+                Text("Döviz fiyatları henüz alınamadı.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if assets.contains(where: {
+                $0.symbol == "XAU" || $0.symbol == "XAG"
+            }) {
+                Label(
+                    "Altın ve gümüş henüz toplama dahil değil.",
+                    systemImage: "info.circle"
+                )
+                .font(.caption)
+                .foregroundStyle(.orange)
+            }
+
+            if viewModel.isLoading {
+                ProgressView("Kurlar güncelleniyor...")
+                    .font(.caption)
+            }
+
+            if let error = viewModel.errorMessage {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
+            if let lastUpdated = viewModel.lastUpdated {
+                Text("Kur tarihi: \(lastUpdated)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
 
             HStack {
                 Image(systemName: "wallet.pass")
@@ -127,6 +218,18 @@ struct AssetsView: View {
 
                 Text("\(assets.count) varlık kaydı")
                     .font(.caption.weight(.medium))
+
+                Spacer()
+
+                Button {
+                    Task {
+                        await viewModel.fetchPrices()
+                    }
+                } label: {
+                    Label("Yenile", systemImage: "arrow.clockwise")
+                        .font(.caption)
+                }
+                .disabled(viewModel.isLoading)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -221,6 +324,28 @@ struct AssetsView: View {
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                
+                if let value = viewModel.convertedAmount(
+                    quantity: asset.quantity,
+                    symbol: asset.symbol,
+                    targetCurrency: selectedCurrency
+                ) {
+
+                    Text(
+                        viewModel.formattedAmount(
+                            value,
+                            currency: selectedCurrency
+                        )
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.green)
+
+                } else {
+
+                    Text("Güncel değer alınamadı")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
