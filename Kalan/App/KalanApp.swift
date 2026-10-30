@@ -12,7 +12,8 @@ struct KalanApp: App {
             Income.self,
             Payment.self,
             PaymentOccurrence.self,
-            AssetHolding.self
+            AssetHolding.self,
+            IncomeAmountChange.self
         ])
     }
 }
