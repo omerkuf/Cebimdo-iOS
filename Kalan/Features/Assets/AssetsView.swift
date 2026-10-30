@@ -32,17 +32,13 @@ struct AssetsView: View {
         "TRY", "USD", "EUR"
     ]
 
-    private var currencyTotal: Decimal? {
+    private var portfolioTotal: Decimal? {
 
-        let currencyAssets = assets.filter {
-            $0.symbol != "XAU" && $0.symbol != "XAG"
-        }
-
-        guard !currencyAssets.isEmpty else {
+        guard !assets.isEmpty else {
             return nil
         }
 
-        let values = currencyAssets.compactMap { asset in
+        let values = assets.compactMap { asset in
             viewModel.convertedAmount(
                 quantity: asset.quantity,
                 symbol: asset.symbol,
@@ -50,7 +46,7 @@ struct AssetsView: View {
             )
         }
 
-        guard values.count == currencyAssets.count else {
+        guard values.count == assets.count else {
             return nil
         }
 
@@ -136,6 +132,12 @@ struct AssetsView: View {
             }
             .task {
                 await viewModel.fetchPrices()
+
+                if assets.contains(where: {
+                    $0.symbol == "XAU" || $0.symbol == "XAG"
+                }) {
+                    await viewModel.fetchMetals()
+                }
             }
         }
     }
@@ -158,11 +160,11 @@ struct AssetsView: View {
             }
             .pickerStyle(.segmented)
 
-            if let currencyTotal {
+            if let portfolioTotal {
 
                 Text(
                     viewModel.formattedAmount(
-                        currencyTotal,
+                        portfolioTotal,
                         currency: selectedCurrency
                     )
                 )
@@ -224,6 +226,12 @@ struct AssetsView: View {
                 Button {
                     Task {
                         await viewModel.fetchPrices()
+
+                        if assets.contains(where: {
+                            $0.symbol == "XAU" || $0.symbol == "XAG"
+                        }) {
+                            await viewModel.fetchMetals()
+                        }
                     }
                 } label: {
                     Label("Yenile", systemImage: "arrow.clockwise")
