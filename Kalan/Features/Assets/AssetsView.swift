@@ -6,12 +6,269 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct AssetsView: View {
+
+    @Environment(\.modelContext) private var modelContext
+
+    @Query(sort: \AssetHolding.createdAt, order: .reverse)
+    private var assets: [AssetHolding]
+
+    @State private var showAddAsset = false
+    @State private var selectedAsset: AssetHolding?
+
+    @State private var assetToDelete: AssetHolding?
+    @State private var showDeleteConfirmation = false
+
+    @State private var showError = false
+    @State private var errorMessage = ""
+
+    private var preciousMetals: [AssetHolding] {
+        assets.filter {
+            $0.symbol == "XAU" || $0.symbol == "XAG"
+        }
+    }
+
+    private var currencies: [AssetHolding] {
+        assets.filter {
+            $0.symbol != "XAU" && $0.symbol != "XAG"
+        }
+    }
+
     var body: some View {
         NavigationStack {
-            Text("Varlıklarım")
-                .navigationTitle("Varlıklarım")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+
+                    portfolioSummary
+
+                    if assets.isEmpty {
+                        emptyState
+                    } else {
+
+                        if !preciousMetals.isEmpty {
+                            assetSection(
+                                title: "Değerli Madenler",
+                                items: preciousMetals
+                            )
+                        }
+
+                        if !currencies.isEmpty {
+                            assetSection(
+                                title: "Dövizler",
+                                items: currencies
+                            )
+                        }
+                    }
+                }
+                .padding(16)
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Varlıklarım")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showAddAsset = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("Yeni varlık ekle")
+                }
+            }
+            .sheet(isPresented: $showAddAsset) {
+                AddAssetView()
+            }
+            .sheet(item: $selectedAsset) { asset in
+                AddAssetView(asset: asset)
+            }
+            .alert(
+                "Varlığı Sil",
+                isPresented: $showDeleteConfirmation
+            ) {
+                Button("Vazgeç", role: .cancel) {
+                    assetToDelete = nil
+                }
+
+                Button("Sil", role: .destructive) {
+                    deleteAsset()
+                }
+            } message: {
+                Text("Bu varlık kaydı kalıcı olarak silinecek.")
+            }
+            .alert("Hata", isPresented: $showError) {
+                Button("Tamam", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
         }
+    }
+
+    private var portfolioSummary: some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+            Text("Toplam Portföyüm")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            Text("Henüz hesaplanmadı")
+                .font(.title2.bold())
+
+            Text(
+                "Güncel piyasa fiyatları eklendiğinde " +
+                "toplam TL karşılığını burada göreceksiniz."
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+            HStack {
+                Image(systemName: "wallet.pass")
+                    .foregroundStyle(.blue)
+
+                Text("\(assets.count) varlık kaydı")
+                    .font(.caption.weight(.medium))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+
+            Image(systemName: "tray")
+                .font(.system(size: 42))
+                .foregroundStyle(.secondary)
+
+            Text("Henüz Varlık Eklenmedi")
+                .font(.headline)
+
+            Text(
+                "Altın, gümüş veya döviz varlıklarınızı " +
+                "ekleyerek portföyünüzü oluşturmaya başlayın."
+            )
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+
+            Button {
+                showAddAsset = true
+            } label: {
+                Label("Varlık Ekle", systemImage: "plus")
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 50)
+    }
+
+    private func assetSection(
+        title: String,
+        items: [AssetHolding]
+    ) -> some View {
+
+        VStack(alignment: .leading, spacing: 12) {
+
+            Text(title)
+                .font(.headline)
+
+            VStack(spacing: 0) {
+
+                ForEach(items) { asset in
+
+                    assetRow(asset)
+
+                    if asset.id != items.last?.id {
+                        Divider()
+                            .padding(.leading, 48)
+                    }
+                }
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
+        }
+    }
+
+    private func assetRow(_ asset: AssetHolding) -> some View {
+
+        HStack(spacing: 12) {
+
+            Image(
+                systemName: AssetType(
+                    rawValue: asset.symbol.lowercased()
+                )?.icon ?? "wallet.pass"
+            )
+            .font(.title3)
+            .foregroundStyle(.blue)
+            .frame(width: 36, height: 36)
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 5) {
+
+                Text(asset.name)
+                    .font(.subheadline.weight(.semibold))
+
+                Text(
+                    "\(formatQuantity(asset.quantity)) \(asset.unit)"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Button {
+                selectedAsset = asset
+            } label: {
+                Image(systemName: "pencil")
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.bordered)
+            .tint(.secondary)
+            .accessibilityLabel("\(asset.name) düzenle")
+
+            Button(role: .destructive) {
+                assetToDelete = asset
+                showDeleteConfirmation = true
+            } label: {
+                Image(systemName: "trash")
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.bordered)
+            .tint(.red)
+            .accessibilityLabel("\(asset.name) sil")
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func deleteAsset() {
+        guard let assetToDelete else { return }
+
+        modelContext.delete(assetToDelete)
+
+        do {
+            try modelContext.save()
+            self.assetToDelete = nil
+        } catch {
+            modelContext.rollback()
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private func formatQuantity(_ quantity: Decimal) -> String {
+        quantity.formatted(
+            .number
+                .precision(.fractionLength(0...4))
+                .locale(Locale(identifier: "tr_TR"))
+        )
     }
 }

@@ -18,6 +18,7 @@ final class AssetHolding {
     var quantity: Decimal
     var unit: String
     var createdAt: Date
+    var updatedAt: Date?
 
     init(
         name: String,
@@ -31,5 +32,6 @@ final class AssetHolding {
         self.quantity = quantity
         self.unit = unit
         self.createdAt = Date()
+        self.updatedAt = Date()
     }
 }
