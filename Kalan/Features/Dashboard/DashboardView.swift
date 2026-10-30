@@ -11,6 +11,7 @@ import SwiftData
 struct DashboardView: View {
 
     @Binding var selectedTab: AppTab
+    @Binding var selectedAddType: Int
 
     @Environment(\.modelContext) private var modelContext
 
@@ -23,6 +24,7 @@ struct DashboardView: View {
     @State private var selectedOccurrence: PaymentOccurrence?
     @State private var errorMessage: String?
     @State private var showError = false
+    @State private var showSettings = false
 
     private let calendar = Calendar.current
     private let trLocale = Locale(identifier: "tr_TR")
@@ -102,9 +104,12 @@ struct DashboardView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Image(systemName: "gearshape")
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .accessibilityLabel("Ayarlar")
                 }
             }
             .onAppear {
@@ -117,6 +122,9 @@ struct DashboardView: View {
                 PaymentOccurrenceEditView(
                     occurrence: occurrence
                 )
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
             }
             .alert("Hata", isPresented: $showError) {
                 Button("Tamam", role: .cancel) {}
@@ -206,6 +214,7 @@ struct DashboardView: View {
         HStack(spacing: 12) {
 
             Button {
+                selectedAddType = 0
                 selectedTab = .add
             } label: {
                 Label("Gelir Ekle", systemImage: "plus")
@@ -214,6 +223,7 @@ struct DashboardView: View {
             .buttonStyle(.borderedProminent)
 
             Button {
+                selectedAddType = 1
                 selectedTab = .add
             } label: {
                 Label(

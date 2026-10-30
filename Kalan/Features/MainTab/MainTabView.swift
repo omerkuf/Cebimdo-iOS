@@ -18,15 +18,19 @@ enum AppTab: Hashable {
 struct MainTabView: View {
 
     @State private var selectedTab: AppTab = .home
+    @State private var selectedAddType = 0
 
     var body: some View {
         TabView(selection: $selectedTab) {
 
-            DashboardView(selectedTab: $selectedTab)
-                .tabItem {
-                    Label("Ana Sayfa", systemImage: "house")
-                }
-                .tag(AppTab.home)
+            DashboardView(
+                selectedTab: $selectedTab,
+                selectedAddType: $selectedAddType
+            )
+            .tabItem {
+                Label("Ana Sayfa", systemImage: "house")
+            }
+            .tag(AppTab.home)
 
             TransactionsView()
                 .tabItem {
@@ -34,11 +38,13 @@ struct MainTabView: View {
                 }
                 .tag(AppTab.transactions)
 
-            AddTransactionView()
-                .tabItem {
-                    Label("Ekle", systemImage: "plus.circle")
-                }
-                .tag(AppTab.add)
+            AddTransactionView(
+                selectedType: $selectedAddType
+            )
+            .tabItem {
+                Label("Ekle", systemImage: "plus.circle")
+            }
+            .tag(AppTab.add)
 
             AssetsView()
                 .tabItem {

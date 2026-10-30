@@ -12,7 +12,7 @@ struct AddTransactionView: View {
 
     @Environment(\.modelContext) private var modelContext
 
-    @State private var selectedType = 0
+    @Binding var selectedType: Int
     @State private var name = ""
     @State private var amountText = ""
     @State private var category = "Maaş"
@@ -66,6 +66,11 @@ struct AddTransactionView: View {
                     .labelsHidden()
                     .onChange(of: selectedType) { _, newValue in
                         category = newValue == 0 ? "Maaş" : "Fatura"
+                        name = ""
+                        amountText = ""
+                        note = ""
+                        recurrence = .once
+                        selectedDate = Date()
                     }
                 }
 
