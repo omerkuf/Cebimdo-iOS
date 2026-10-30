@@ -15,8 +15,8 @@ struct TransactionsView: View {
     @Query(sort: \Income.startDate, order: .reverse)
     private var incomes: [Income]
 
-    @Query
-    private var payments: [Payment]
+    @Query private var payments: [Payment]
+    @Query private var incomeChanges: [IncomeAmountChange]
 
     @Query(sort: \PaymentOccurrence.dueDate)
     private var occurrences: [PaymentOccurrence]
@@ -72,7 +72,18 @@ struct TransactionsView: View {
     }
     
     private func deleteIncome() {
-        guard let incomeToDelete else { return }
+
+        guard let incomeToDelete else {
+            return
+        }
+
+        let relatedChanges = incomeChanges.filter {
+            $0.incomeID == incomeToDelete.id
+        }
+
+        relatedChanges.forEach {
+            modelContext.delete($0)
+        }
 
         modelContext.delete(incomeToDelete)
 
@@ -237,7 +248,11 @@ struct TransactionsView: View {
                 IncomeDisplayItem(
                     id: "\(income.id.uuidString)-\(date.timeIntervalSince1970)",
                     name: income.name,
-                    amount: income.amount,
+                    amount: IncomeHistoryService.amount(
+                        for: income,
+                        on: date,
+                        changes: incomeChanges
+                    ),
                     category: income.category,
                     date: date,
                     sourceID: income.id

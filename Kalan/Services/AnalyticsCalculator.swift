@@ -32,25 +32,15 @@ struct AnalyticsCalculator {
         incomes: [Income],
         payments: [Payment],
         occurrences: [PaymentOccurrence],
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        changes: [IncomeAmountChange] = []
     ) -> AnalyticsMonthSummary {
 
-        let incomeTotal = incomes.reduce(Decimal.zero) {
-            total, income in
-
-            let dates = RecurrenceService.dates(
-                in: month,
-                from: income.startDate,
-                recurrence: RecurrenceType(
-                    rawValue: income.recurrence
-                ) ?? .once,
-                endDate: income.endDate,
-                calendar: calendar
-            )
-
-            return total
-                + income.amount * Decimal(dates.count)
-        }
+        let incomeTotal = IncomeHistoryService.monthlyTotal(
+            incomes: incomes,
+            changes: changes,
+            month: month
+        )
 
         let paymentItems = payments.flatMap { payment in
 
@@ -118,7 +108,8 @@ struct AnalyticsCalculator {
         incomes: [Income],
         payments: [Payment],
         occurrences: [PaymentOccurrence],
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        changes: [IncomeAmountChange] = []
     ) -> [AnalyticsMonthSummary] {
 
         (-5...0).compactMap { offset in
@@ -136,7 +127,8 @@ struct AnalyticsCalculator {
                 incomes: incomes,
                 payments: payments,
                 occurrences: occurrences,
-                calendar: calendar
+                calendar: calendar,
+                changes: changes
             )
         }
     }

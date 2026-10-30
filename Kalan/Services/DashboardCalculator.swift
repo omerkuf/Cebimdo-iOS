@@ -11,22 +11,15 @@ struct DashboardCalculator {
 
     static func monthlyIncome(
         incomes: [Income],
-        month: Date
+        month: Date,
+        changes: [IncomeAmountChange] = []
     ) -> Decimal {
 
-        incomes.reduce(.zero) { total, income in
-
-            let dates = RecurrenceService.dates(
-                in: month,
-                from: income.startDate,
-                recurrence: RecurrenceType(
-                    rawValue: income.recurrence
-                ) ?? .once,
-                endDate: income.endDate
-            )
-
-            return total + income.amount * Decimal(dates.count)
-        }
+        IncomeHistoryService.monthlyTotal(
+            incomes: incomes,
+            changes: changes,
+            month: month
+        )
     }
 
     static func monthlyPaid(

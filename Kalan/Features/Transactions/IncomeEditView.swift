@@ -23,6 +23,10 @@ struct IncomeEditView: View {
     @State private var note: String
 
     @State private var showError = false
+    
+    @State private var effectiveDate = Date()
+    
+    @Query private var incomeChanges: [IncomeAmountChange]
 
     private let categories = [
         "Maaş",
@@ -60,12 +64,20 @@ struct IncomeEditView: View {
                         format: .number
                     )
                     .keyboardType(.decimalPad)
+                    
+                    DatePicker(
+                        "Yeni Tutarın Geçerli Olacağı Tarih",
+                        selection: $effectiveDate,
+                        in: income.startDate...,
+                        displayedComponents: .date
+                    )
 
                     Picker("Kategori", selection: $category) {
                         ForEach(categories, id: \.self) {
                             Text($0).tag($0)
                         }
                     }
+                    .disabled(true)
                 }
 
                 Section("Tekrarlama") {
@@ -74,12 +86,14 @@ struct IncomeEditView: View {
                             Text(type.title).tag(type)
                         }
                     }
+                    .disabled(true)
 
                     DatePicker(
                         "Başlangıç Tarihi",
                         selection: $startDate,
                         displayedComponents: .date
                     )
+                    .disabled(true)
                 }
 
                 Section("Açıklama") {
@@ -93,9 +107,8 @@ struct IncomeEditView: View {
 
                 Section {
                     Text(
-                        "Bu değişiklik gelir tanımını günceller. " +
-                        "Tekrarlayan gelirlerde geçmiş dönemler de " +
-                        "yeniden hesaplanabilir."
+                        "Yeni gelir tutarı seçtiğiniz tarihten itibaren geçerli olur. " +
+                        "Önceki dönemlerin gelir tutarları korunur."
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -127,16 +140,68 @@ struct IncomeEditView: View {
                 Text("Gelir güncellenemedi.")
             }
         }
+        .onAppear {
+            amount = IncomeHistoryService.amount(
+                for: income,
+                on: effectiveDate,
+                changes: incomeChanges
+            )
+        }
+        .onChange(of: effectiveDate) { _, newDate in
+            amount = IncomeHistoryService.amount(
+                for: income,
+                on: newDate,
+                changes: incomeChanges
+            )
+        }
     }
 
     private func saveChanges() {
-        income.name = name.trimmingCharacters(
+
+        let trimmedName = name.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
-        income.amount = amount
+
+        guard !trimmedName.isEmpty, amount > 0 else {
+            return
+        }
+
+        let calendar = Calendar.current
+        let effectiveDay = calendar.startOfDay(for: effectiveDate)
+
+        let existingChange = incomeChanges.first {
+            $0.incomeID == income.id &&
+            calendar.isDate(
+                $0.effectiveDate,
+                inSameDayAs: effectiveDay
+            )
+        }
+
+        // Income.amount başlangıç tutarı olarak korunuyor.
+        // Güncel tutar, değişiklik geçmişinden hesaplanıyor.
+        let previousAmount = IncomeHistoryService.amount(
+            for: income,
+            on: effectiveDay,
+            changes: incomeChanges
+        )
+
+        if amount != previousAmount {
+
+            if let existingChange {
+                existingChange.amount = amount
+            } else {
+                let change = IncomeAmountChange(
+                    incomeID: income.id,
+                    effectiveDate: effectiveDay,
+                    amount: amount
+                )
+
+                modelContext.insert(change)
+            }
+        }
+
+        income.name = trimmedName
         income.category = category
-        income.startDate = startDate
-        income.recurrence = recurrence.rawValue
         income.note = note
 
         do {

@@ -20,6 +20,7 @@ struct DashboardView: View {
     @Query private var incomes: [Income]
     @Query private var payments: [Payment]
     @Query private var assetHoldings: [AssetHolding]
+    @Query private var incomeChanges: [IncomeAmountChange]
 
     @Query(sort: \PaymentOccurrence.dueDate)
     private var occurrences: [PaymentOccurrence]
@@ -55,7 +56,8 @@ struct DashboardView: View {
     private var monthlyIncome: Decimal {
         DashboardCalculator.monthlyIncome(
             incomes: incomes,
-            month: currentMonth
+            month: Date(),
+            changes: incomeChanges
         )
     }
 
@@ -98,6 +100,62 @@ struct DashboardView: View {
             .sorted {
                 $0.dueDate < $1.dueDate
             }
+    }
+    
+    private var salaryPeriodIncome: Decimal {
+
+        let calendar = Calendar.current
+
+        let start = calendar.startOfDay(for: salaryPeriodStart)
+        let end = calendar.startOfDay(for: salaryPeriodEnd)
+
+        guard start < end else {
+            return .zero
+        }
+
+        var total = Decimal.zero
+        var month = calendar.date(
+            from: calendar.dateComponents(
+                [.year, .month],
+                from: start
+            )
+        )!
+
+        while month < end {
+
+            for income in incomes {
+
+                let dates = RecurrenceService.dates(
+                    in: month,
+                    from: income.startDate,
+                    recurrence: RecurrenceType(
+                        rawValue: income.recurrence
+                    ) ?? .once,
+                    endDate: income.endDate
+                )
+
+                for date in dates where date >= start && date < end {
+
+                    total += IncomeHistoryService.amount(
+                        for: income,
+                        on: date,
+                        changes: incomeChanges
+                    )
+                }
+            }
+
+            guard let next = calendar.date(
+                byAdding: .month,
+                value: 1,
+                to: month
+            ) else {
+                break
+            }
+
+            month = next
+        }
+
+        return total
     }
     
     private var salaryPeriodStart: Date {
