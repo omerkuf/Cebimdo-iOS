@@ -12,11 +12,14 @@ struct DashboardView: View {
 
     @Binding var selectedTab: AppTab
     @Binding var selectedAddType: Int
+    
+    @ObservedObject var assetsViewModel: AssetsViewModel
 
     @Environment(\.modelContext) private var modelContext
 
     @Query private var incomes: [Income]
     @Query private var payments: [Payment]
+    @Query private var assetHoldings: [AssetHolding]
 
     @Query(sort: \PaymentOccurrence.dueDate)
     private var occurrences: [PaymentOccurrence]
@@ -166,6 +169,27 @@ struct DashboardView: View {
             daysRemaining: daysUntilSalary
         )
     }
+    
+    private var portfolioTotal: Decimal? {
+
+        guard !assetHoldings.isEmpty else {
+            return nil
+        }
+
+        let values = assetHoldings.compactMap { asset in
+            assetsViewModel.convertedAmount(
+                quantity: asset.quantity,
+                symbol: asset.symbol,
+                targetCurrency: "TRY"
+            )
+        }
+
+        guard values.count == assetHoldings.count else {
+            return nil
+        }
+
+        return values.reduce(.zero, +)
+    }
 
     var body: some View {
         NavigationStack {
@@ -218,10 +242,12 @@ struct DashboardView: View {
     }
 
     private var portfolioCard: some View {
+
         Button {
             selectedTab = .assets
         } label: {
-            VStack(alignment: .leading, spacing: 10) {
+
+            VStack(alignment: .leading, spacing: 12) {
 
                 HStack {
                     Text("Portföyüm")
@@ -233,13 +259,63 @@ struct DashboardView: View {
                 }
                 .foregroundStyle(.secondary)
 
-                Text("Henüz hesaplanmadı")
-                    .font(.title2.bold())
-                    .foregroundStyle(.primary)
+                if assetHoldings.isEmpty {
 
-                Text("Varlıklarımın toplam TL karşılığı")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    Text("Henüz varlık eklenmedi")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary)
+
+                    Text("Varlık eklemek için dokunun")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                } else if let portfolioTotal {
+
+                    Text(
+                        assetsViewModel.formattedAmount(
+                            portfolioTotal,
+                            currency: "TRY"
+                        )
+                    )
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+
+                    Text("Toplam tahmini portföy değerim")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                } else if assetsViewModel.isLoading ||
+                            assetsViewModel.isLoadingMetals {
+
+                    HStack(spacing: 10) {
+                        ProgressView()
+
+                        Text("Portföy hesaplanıyor...")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                } else {
+
+                    Text("Portföy değeri alınamadı")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+
+                    Text("Güncel fiyatları kontrol etmek için dokunun")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: 6) {
+                    Image(systemName: "wallet.pass")
+                        .foregroundStyle(.blue)
+
+                    Text("\(assetHoldings.count) varlık kaydı")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)

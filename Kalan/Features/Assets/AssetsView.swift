@@ -15,8 +15,8 @@ struct AssetsView: View {
     @Query(sort: \AssetHolding.createdAt, order: .reverse)
     private var assets: [AssetHolding]
     
-    @StateObject private var viewModel = AssetsViewModel()
-
+    @ObservedObject var viewModel: AssetsViewModel
+    
     @State private var selectedCurrency = "TRY"
 
     @State private var showAddAsset = false
@@ -130,15 +130,6 @@ struct AssetsView: View {
             } message: {
                 Text(errorMessage)
             }
-            .task {
-                await viewModel.fetchPrices()
-
-                if assets.contains(where: {
-                    $0.symbol == "XAU" || $0.symbol == "XAG"
-                }) {
-                    await viewModel.fetchMetals()
-                }
-            }
         }
     }
 
@@ -225,13 +216,12 @@ struct AssetsView: View {
 
                 Button {
                     Task {
-                        await viewModel.fetchPrices()
-
-                        if assets.contains(where: {
-                            $0.symbol == "XAU" || $0.symbol == "XAG"
-                        }) {
-                            await viewModel.fetchMetals()
-                        }
+                        await viewModel.refreshIfNeeded(
+                            needsMetals: assets.contains {
+                                $0.symbol == "XAU" || $0.symbol == "XAG"
+                            },
+                            force: true
+                        )
                     }
                 } label: {
                     Label("Yenile", systemImage: "arrow.clockwise")

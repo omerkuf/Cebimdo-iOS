@@ -18,12 +18,68 @@ final class AssetsViewModel: ObservableObject {
     
     @Published private(set) var metals: MetalsPriceResponse?
     @Published private(set) var metalsErrorMessage: String?
+    
+    @Published private(set) var isLoadingMetals = false
 
     private let currencyService = CurrencyService()
     private let metalsService = MetalsPriceService()
     
+    private var lastRefreshDate: Date?
+    private var isRefreshingPortfolio = false
+    
+    func refreshIfNeeded(
+        needsMetals: Bool,
+        force: Bool = false
+    ) async {
+
+        guard !isRefreshingPortfolio else {
+            return
+        }
+
+        let recentlyUpdated = lastRefreshDate.map {
+            Date().timeIntervalSince($0) < 15 * 60
+        } ?? false
+
+        let hasCurrencyRates = !rates.isEmpty
+        let hasMetals = !needsMetals || metals != nil
+
+        if !force,
+           recentlyUpdated,
+           hasCurrencyRates,
+           hasMetals {
+            return
+        }
+
+        isRefreshingPortfolio = true
+
+        defer {
+            isRefreshingPortfolio = false
+        }
+
+        if force || !recentlyUpdated || !hasCurrencyRates {
+            await fetchPrices()
+        }
+
+        if needsMetals &&
+           (force || !recentlyUpdated || metals == nil) {
+            await fetchMetals()
+        }
+
+        if !rates.isEmpty && (!needsMetals || metals != nil) {
+            lastRefreshDate = Date()
+        }
+    }
+    
     func fetchMetals() async {
+
+        guard !isLoadingMetals else { return }
+
+        isLoadingMetals = true
         metalsErrorMessage = nil
+
+        defer {
+            isLoadingMetals = false
+        }
 
         do {
             metals = try await metalsService.fetchPrices()

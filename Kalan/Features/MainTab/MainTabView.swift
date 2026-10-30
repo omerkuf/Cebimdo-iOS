@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 enum AppTab: Hashable {
     case home
@@ -16,16 +17,21 @@ enum AppTab: Hashable {
 }
 
 struct MainTabView: View {
+    
+    @Query private var assetHoldings: [AssetHolding]
 
     @State private var selectedTab: AppTab = .home
     @State private var selectedAddType = 0
+    
+    @StateObject private var assetsViewModel = AssetsViewModel()
 
     var body: some View {
         TabView(selection: $selectedTab) {
 
             DashboardView(
                 selectedTab: $selectedTab,
-                selectedAddType: $selectedAddType
+                selectedAddType: $selectedAddType,
+                assetsViewModel: assetsViewModel
             )
             .tabItem {
                 Label("Ana Sayfa", systemImage: "house")
@@ -46,7 +52,7 @@ struct MainTabView: View {
             }
             .tag(AppTab.add)
 
-            AssetsView()
+            AssetsView(viewModel: assetsViewModel)
                 .tabItem {
                     Label("Varlıklarım", systemImage: "wallet.pass")
                 }
@@ -57,6 +63,13 @@ struct MainTabView: View {
                     Label("Analiz", systemImage: "chart.pie")
                 }
                 .tag(AppTab.analytics)
+        }
+        .task(id: assetHoldings.map(\.symbol).sorted().joined(separator: ",")) {
+            await assetsViewModel.refreshIfNeeded(
+                needsMetals: assetHoldings.contains {
+                    $0.symbol == "XAU" || $0.symbol == "XAG"
+                }
+            )
         }
     }
 }
