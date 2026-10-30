@@ -15,6 +15,7 @@ final class PaymentOccurrence {
 
     var paymentID: UUID
     var dueDate: Date
+    var scheduledDate: Date?
     var amount: Decimal
     var name: String
     var isPaid: Bool
@@ -31,6 +32,7 @@ final class PaymentOccurrence {
         self.id = UUID()
         self.paymentID = paymentID
         self.dueDate = dueDate
+        self.scheduledDate = dueDate
         self.amount = amount
         self.name = name
         self.isPaid = isPaid
