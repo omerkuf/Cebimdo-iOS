@@ -1,0 +1,54 @@
+//
+//  SummaryCard.swift
+//  Kalan
+//
+//  Created by Ömer Faruk Kılıçaslan on 30.10.2026.
+//
+
+import SwiftUI
+
+struct SummaryCard: View {
+
+    let title: String
+    let amount: Decimal
+    let icon: String
+    let color: Color
+    let subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+
+            Text(
+                amount.formatted(
+                    .currency(code: "TRY")
+                        .locale(Locale(identifier: "tr_TR"))
+                )
+            )
+            .font(.system(size: 21, weight: .bold))
+            .minimumScaleFactor(0.7)
+            .lineLimit(1)
+
+            Text(subtitle)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+    }
+}
