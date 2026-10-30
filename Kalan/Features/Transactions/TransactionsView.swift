@@ -263,6 +263,15 @@ struct TransactionsView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
+                                // Ödenmemiş ve tarihi geçmiş ödemeleri göster
+                                if calendar.startOfDay(for: occurrence.dueDate)
+                                    < calendar.startOfDay(for: Date()) && !occurrence.isPaid {
+
+                                    Text("Gecikmiş")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.red)
+                                }
+
                                 Text(formatCurrency(occurrence.amount))
                                     .font(.caption.weight(.medium))
                             }

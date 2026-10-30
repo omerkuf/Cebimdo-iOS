@@ -25,6 +25,9 @@ struct DashboardView: View {
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var showSettings = false
+    
+    @AppStorage("salaryDay")
+    private var salaryDay = 15
 
     private let calendar = Calendar.current
     private let trLocale = Locale(identifier: "tr_TR")
@@ -72,16 +75,96 @@ struct DashboardView: View {
         )
     }
 
-    private var dailyLimit: Decimal {
-        DashboardCalculator.dailyLimit(
-            remainingBudget: remainingBudget
+    private var upcomingPayments: [PaymentOccurrence] {
+
+        let today = calendar.startOfDay(for: Date())
+
+        guard let endDate = calendar.date(
+            byAdding: .day,
+            value: 30,
+            to: today
+        ) else {
+            return []
+        }
+
+        return occurrences
+            .filter {
+                !$0.isPaid &&
+                calendar.startOfDay(for: $0.dueDate) <= endDate
+            }
+            .sorted {
+                $0.dueDate < $1.dueDate
+            }
+    }
+    
+    private var salaryPeriodStart: Date {
+        BudgetCalculator.previousSalaryDate(
+            salaryDay: salaryDay
         )
     }
 
-    private var upcomingPayments: [PaymentOccurrence] {
-        monthlyOccurrences
-            .filter { !$0.isPaid }
-            .sorted { $0.dueDate < $1.dueDate }
+    private var salaryPeriodEnd: Date {
+        BudgetCalculator.nextSalaryDate(
+            salaryDay: salaryDay
+        )
+    }
+
+    private var daysUntilSalary: Int {
+        BudgetCalculator.daysUntilSalary(
+            salaryDay: salaryDay
+        )
+    }
+
+    private var periodOccurrences: [PaymentOccurrence] {
+        occurrences.filter {
+            $0.dueDate >= salaryPeriodStart &&
+            $0.dueDate < salaryPeriodEnd
+        }
+    }
+
+    private var periodIncome: Decimal {
+        incomes.reduce(.zero) { total, income in
+
+            let recurrence = RecurrenceType(
+                rawValue: income.recurrence
+            ) ?? .once
+
+            let months = [
+                salaryPeriodStart,
+                salaryPeriodEnd
+            ]
+
+            let dates = months.flatMap { month in
+                RecurrenceService.dates(
+                    in: month,
+                    from: income.startDate,
+                    recurrence: recurrence,
+                    endDate: income.endDate
+                )
+            }
+
+            let matchingDates = dates.filter {
+                $0 >= salaryPeriodStart &&
+                $0 < salaryPeriodEnd
+            }
+
+            return total + income.amount * Decimal(matchingDates.count)
+        }
+    }
+
+    private var periodRemainingBudget: Decimal {
+        let totalPayments = periodOccurrences.reduce(.zero) {
+            $0 + $1.amount
+        }
+
+        return periodIncome - totalPayments
+    }
+
+    private var dailyLimit: Decimal {
+        BudgetCalculator.dailyLimit(
+            remainingBudget: periodRemainingBudget,
+            daysRemaining: daysUntilSalary
+        )
     }
 
     var body: some View {
@@ -240,7 +323,7 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: 14) {
 
             HStack {
-                Text("Bu Ayın Bekleyen Ödemeleri")
+                Text("Gecikmiş ve Yaklaşan Ödemeler")
                     .font(.headline)
 
                 Spacer()
@@ -281,8 +364,14 @@ struct DashboardView: View {
 
                 Spacer()
 
-                Text(formatCurrency(monthlyUnpaid))
-                    .font(.subheadline.weight(.bold))
+                Text(
+                    formatCurrency(
+                        upcomingPayments.reduce(.zero) {
+                            $0 + $1.amount
+                        }
+                    )
+                )
+                .font(.subheadline.weight(.bold))
             }
         }
         .padding(16)
@@ -319,6 +408,15 @@ struct DashboardView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+                // Ödeme tarihi geçmişse gecikmiş uyarısı göster
+                if calendar.startOfDay(for: occurrence.dueDate)
+                    < calendar.startOfDay(for: Date()) && !occurrence.isPaid {
+
+                    Text("Gecikmiş")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.red)
+                }
+
                 Text(formatCurrency(occurrence.amount))
                     .font(.caption.weight(.semibold))
             }
@@ -349,10 +447,45 @@ struct DashboardView: View {
 
     private func generatePayments() {
         do {
-            try PaymentOccurrenceService.generateOccurrences(
-                for: currentMonth,
-                context: modelContext
-            )
+            let today = Date()
+
+            guard
+                let startMonth = calendar.dateInterval(
+                    of: .month,
+                    for: salaryPeriodStart
+                )?.start,
+                let lastMonth = calendar.dateInterval(
+                    of: .month,
+                    for: calendar.date(
+                        byAdding: .day,
+                        value: 30,
+                        to: today
+                    ) ?? today
+                )?.start
+            else {
+                return
+            }
+
+            var month = startMonth
+
+            while month <= lastMonth {
+
+                try PaymentOccurrenceService.generateOccurrences(
+                    for: month,
+                    context: modelContext
+                )
+
+                guard let next = calendar.date(
+                    byAdding: .month,
+                    value: 1,
+                    to: month
+                ) else {
+                    break
+                }
+
+                month = next
+            }
+
         } catch {
             errorMessage = error.localizedDescription
             showError = true
