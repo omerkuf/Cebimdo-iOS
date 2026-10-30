@@ -28,6 +28,12 @@ struct TransactionsView: View {
 
     @State private var errorMessage: String?
     @State private var showError = false
+    
+    @State private var selectedIncome: Income?
+    @State private var incomeToDelete: Income?
+    @State private var paymentToDelete: Payment?
+    @State private var showDeleteIncome = false
+    @State private var showDeletePayment = false
 
     private let calendar = Calendar.current
     private let trLocale = Locale(identifier: "tr_TR")
@@ -62,6 +68,44 @@ struct TransactionsView: View {
     private var totalAmount: Decimal {
         filteredOccurrences.reduce(.zero) {
             $0 + $1.amount
+        }
+    }
+    
+    private func deleteIncome() {
+        guard let incomeToDelete else { return }
+
+        modelContext.delete(incomeToDelete)
+
+        do {
+            try modelContext.save()
+            self.incomeToDelete = nil
+        } catch {
+            modelContext.rollback()
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private func deletePayment() {
+        guard let paymentToDelete else { return }
+
+        let relatedOccurrences = occurrences.filter {
+            $0.paymentID == paymentToDelete.id
+        }
+
+        relatedOccurrences.forEach {
+            modelContext.delete($0)
+        }
+
+        modelContext.delete(paymentToDelete)
+
+        do {
+            try modelContext.save()
+            self.paymentToDelete = nil
+        } catch {
+            modelContext.rollback()
+            errorMessage = error.localizedDescription
+            showError = true
         }
     }
 
@@ -100,10 +144,47 @@ struct TransactionsView: View {
                     occurrence: occurrence
                 )
             }
+            .sheet(item: $selectedIncome) { income in
+                IncomeEditView(income: income)
+            }
             .alert("Hata", isPresented: $showError) {
                 Button("Tamam", role: .cancel) {}
             } message: {
                 Text(errorMessage ?? "İşlem tamamlanamadı.")
+            }
+            .alert(
+                "Geliri Sil",
+                isPresented: $showDeleteIncome
+            ) {
+                Button("Vazgeç", role: .cancel) {
+                    incomeToDelete = nil
+                }
+
+                Button("Sil", role: .destructive) {
+                    deleteIncome()
+                }
+            } message: {
+                Text(
+                    "Bu gelir tanımı silinecek. " +
+                    "Tekrarlayan gelirlerin bütün dönemleri etkilenecek."
+                )
+            }
+            .alert(
+                "Ödeme Serisini Sil",
+                isPresented: $showDeletePayment
+            ) {
+                Button("Vazgeç", role: .cancel) {
+                    paymentToDelete = nil
+                }
+
+                Button("Sil", role: .destructive) {
+                    deletePayment()
+                }
+            } message: {
+                Text(
+                    "Bu ödeme ve ona bağlı bütün dönem kayıtları " +
+                    "kalıcı olarak silinecek."
+                )
             }
         }
     }
@@ -158,7 +239,8 @@ struct TransactionsView: View {
                     name: income.name,
                     amount: income.amount,
                     category: income.category,
-                    date: date
+                    date: date,
+                    sourceID: income.id
                 )
             }
         }
@@ -201,10 +283,40 @@ struct TransactionsView: View {
                             .foregroundStyle(.secondary)
                         }
 
-                        Spacer()
+                        Spacer(minLength: 4)
 
                         Text(formatCurrency(income.amount))
                             .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+
+                        // Geliri düzenle
+                        Button {
+                            selectedIncome = incomes.first {
+                                $0.id == income.sourceID
+                            }
+                        } label: {
+                            Image(systemName: "pencil")
+                                .frame(width: 30, height: 30)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.secondary)
+                        .accessibilityLabel("Geliri düzenle")
+
+                        // Geliri sil
+                        Button {
+                            incomeToDelete = incomes.first {
+                                $0.id == income.sourceID
+                            }
+
+                            showDeleteIncome = incomeToDelete != nil
+                        } label: {
+                            Image(systemName: "trash")
+                                .frame(width: 30, height: 30)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                        .accessibilityLabel("Geliri sil")
                     }
                     .padding(.vertical, 5)
                 }
@@ -287,6 +399,21 @@ struct TransactionsView: View {
                             .buttonStyle(.bordered)
                             .tint(.secondary)
                             .accessibilityLabel("Ödemeyi düzenle")
+                            
+                            // Ödeme serisini sil
+                            Button {
+                                paymentToDelete = payments.first {
+                                    $0.id == occurrence.paymentID
+                                }
+
+                                showDeletePayment = paymentToDelete != nil
+                            } label: {
+                                Image(systemName: "trash")
+                                    .frame(width: 30, height: 30)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.red)
+                            .accessibilityLabel("Ödeme serisini sil")
 
                             Button {
                                 togglePaid(occurrence)
@@ -390,4 +517,5 @@ private struct IncomeDisplayItem: Identifiable {
     let amount: Decimal
     let category: String
     let date: Date
+    let sourceID: UUID
 }

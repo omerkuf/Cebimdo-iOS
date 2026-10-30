@@ -163,7 +163,7 @@ struct AssetsView: View {
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
 
-                Text("Döviz varlıklarımın toplam değeri")
+                Text("Toplam tahmini portföy değeri")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -175,17 +175,6 @@ struct AssetsView: View {
                 Text("Döviz fiyatları henüz alınamadı.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            }
-
-            if assets.contains(where: {
-                $0.symbol == "XAU" || $0.symbol == "XAG"
-            }) {
-                Label(
-                    "Altın ve gümüş henüz toplama dahil değil.",
-                    systemImage: "info.circle"
-                )
-                .font(.caption)
-                .foregroundStyle(.orange)
             }
 
             if viewModel.isLoading {
@@ -201,6 +190,13 @@ struct AssetsView: View {
 
             if let lastUpdated = viewModel.lastUpdated {
                 Text("Kur tarihi: \(lastUpdated)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            
+            // Altın ve gümüş fiyatı güncelleme tarihi
+            if let updatedAt = viewModel.metals?.updatedAt {
+                Text("Maden fiyatı zamanı: \(updatedAt)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
