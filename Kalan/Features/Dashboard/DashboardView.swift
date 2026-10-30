@@ -6,40 +6,78 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct DashboardView: View {
 
     @Binding var selectedTab: AppTab
 
-    @State private var payments = DemoPayment.samples
-    @State private var selectedPayment: DemoPayment?
+    @Environment(\.modelContext) private var modelContext
 
-    // Şimdilik örnek gelir ve portföy değerleri
-    private let monthlyIncome: Decimal = 85000
-    private let portfolioValue: Decimal = 1250000
+    @Query private var incomes: [Income]
+    @Query private var payments: [Payment]
 
-    private var paidTotal: Decimal {
-        payments
-            .filter { $0.isPaid }
-            .reduce(Decimal.zero) { $0 + $1.amount }
+    @Query(sort: \PaymentOccurrence.dueDate)
+    private var occurrences: [PaymentOccurrence]
+
+    @State private var selectedOccurrence: PaymentOccurrence?
+    @State private var errorMessage: String?
+    @State private var showError = false
+
+    private let calendar = Calendar.current
+    private let trLocale = Locale(identifier: "tr_TR")
+
+    private var currentMonth: Date {
+        Date()
     }
 
-    private var unpaidTotal: Decimal {
-        payments
-            .filter { !$0.isPaid }
-            .reduce(Decimal.zero) { $0 + $1.amount }
+    private var monthlyOccurrences: [PaymentOccurrence] {
+        guard let interval = calendar.dateInterval(
+            of: .month,
+            for: currentMonth
+        ) else {
+            return []
+        }
+
+        return occurrences.filter {
+            interval.contains($0.dueDate)
+        }
+    }
+
+    private var monthlyIncome: Decimal {
+        DashboardCalculator.monthlyIncome(
+            incomes: incomes,
+            month: currentMonth
+        )
+    }
+
+    private var monthlyPaid: Decimal {
+        DashboardCalculator.monthlyPaid(
+            occurrences: monthlyOccurrences
+        )
+    }
+
+    private var monthlyUnpaid: Decimal {
+        DashboardCalculator.monthlyUnpaid(
+            occurrences: monthlyOccurrences
+        )
     }
 
     private var remainingBudget: Decimal {
-        monthlyIncome - paidTotal - unpaidTotal
+        DashboardCalculator.remainingBudget(
+            income: monthlyIncome,
+            occurrences: monthlyOccurrences
+        )
     }
 
     private var dailyLimit: Decimal {
-        max(Decimal.zero, remainingBudget) / 15
+        DashboardCalculator.dailyLimit(
+            remainingBudget: remainingBudget
+        )
     }
 
-    private var upcomingPayments: [DemoPayment] {
-        payments
+    private var upcomingPayments: [PaymentOccurrence] {
+        monthlyOccurrences
             .filter { !$0.isPaid }
             .sorted { $0.dueDate < $1.dueDate }
     }
@@ -64,18 +102,26 @@ struct DashboardView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        // Ayarlar ekranını daha sonra bağlayacağız
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                    .disabled(true)
+                    Image(systemName: "gearshape")
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
                 }
             }
-            .sheet(item: $selectedPayment) { payment in
-                EditPaymentView(payment: payment) { updated in
-                    updatePayment(updated)
-                }
+            .onAppear {
+                generatePayments()
+            }
+            .onChange(of: payments.count) { _, _ in
+                generatePayments()
+            }
+            .sheet(item: $selectedOccurrence) { occurrence in
+                PaymentOccurrenceEditView(
+                    occurrence: occurrence
+                )
+            }
+            .alert("Hata", isPresented: $showError) {
+                Button("Tamam", role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "İşlem tamamlanamadı.")
             }
         }
     }
@@ -96,11 +142,9 @@ struct DashboardView: View {
                 }
                 .foregroundStyle(.secondary)
 
-                Text(formatCurrency(portfolioValue))
-                    .font(.system(size: 30, weight: .bold))
+                Text("Henüz hesaplanmadı")
+                    .font(.title2.bold())
                     .foregroundStyle(.primary)
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
 
                 Text("Varlıklarımın toplam TL karşılığı")
                     .font(.caption)
@@ -134,7 +178,7 @@ struct DashboardView: View {
 
             SummaryCard(
                 title: "Aylık Harcamam",
-                amount: paidTotal,
+                amount: monthlyPaid,
                 icon: "arrow.up.right",
                 color: .red,
                 subtitle: "Ödenmiş ödemeler"
@@ -145,7 +189,7 @@ struct DashboardView: View {
                 amount: remainingBudget,
                 icon: "wallet.pass",
                 color: .blue,
-                subtitle: "Bekleyen giderler düşüldü"
+                subtitle: "Ödemeler düşüldü"
             )
 
             SummaryCard(
@@ -153,7 +197,7 @@ struct DashboardView: View {
                 amount: dailyLimit,
                 icon: "calendar",
                 color: .green,
-                subtitle: "Örnek: 15 gün"
+                subtitle: "Tahmini · ay sonuna"
             )
         }
     }
@@ -172,8 +216,11 @@ struct DashboardView: View {
             Button {
                 selectedTab = .add
             } label: {
-                Label("Ödeme Ekle", systemImage: "calendar.badge.plus")
-                    .frame(maxWidth: .infinity)
+                Label(
+                    "Ödeme Ekle",
+                    systemImage: "calendar.badge.plus"
+                )
+                .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
         }
@@ -183,7 +230,7 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: 14) {
 
             HStack {
-                Text("Yaklaşan Ödemeler")
+                Text("Bu Ayın Bekleyen Ödemeleri")
                     .font(.headline)
 
                 Spacer()
@@ -195,25 +242,22 @@ struct DashboardView: View {
             }
 
             if upcomingPayments.isEmpty {
+
                 ContentUnavailableView(
                     "Bekleyen ödemeniz yok",
                     systemImage: "checkmark.circle",
-                    description: Text("Tüm ödemeler tamamlandı.")
-                )
-            } else {
-                ForEach(upcomingPayments) { payment in
-
-                    PaymentRow(
-                        payment: payment,
-                        onEdit: {
-                            selectedPayment = payment
-                        },
-                        onTogglePaid: {
-                            togglePayment(payment)
-                        }
+                    description: Text(
+                        "Bu ay için bekleyen ödeme bulunmuyor."
                     )
+                )
 
-                    if payment.id != upcomingPayments.last?.id {
+            } else {
+
+                ForEach(upcomingPayments) { occurrence in
+
+                    paymentRow(occurrence)
+
+                    if occurrence.id != upcomingPayments.last?.id {
                         Divider()
                     }
                 }
@@ -227,7 +271,7 @@ struct DashboardView: View {
 
                 Spacer()
 
-                Text(formatCurrency(unpaidTotal))
+                Text(formatCurrency(monthlyUnpaid))
                     .font(.subheadline.weight(.bold))
             }
         }
@@ -238,30 +282,94 @@ struct DashboardView: View {
         )
     }
 
-    private func togglePayment(_ payment: DemoPayment) {
-        guard let index = payments.firstIndex(
-            where: { $0.id == payment.id }
-        ) else {
-            return
-        }
+    private func paymentRow(
+        _ occurrence: PaymentOccurrence
+    ) -> some View {
 
-        payments[index].isPaid.toggle()
+        HStack(spacing: 10) {
+
+            Image(systemName: "doc.text")
+                .foregroundStyle(.secondary)
+                .frame(width: 32, height: 32)
+                .background(Color(.tertiarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 4) {
+
+                Text(occurrence.name)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+
+                Text(
+                    occurrence.dueDate.formatted(
+                        .dateTime.day().month(.wide)
+                            .locale(trLocale)
+                    )
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                Text(formatCurrency(occurrence.amount))
+                    .font(.caption.weight(.semibold))
+            }
+
+            Spacer(minLength: 4)
+
+            Button {
+                selectedOccurrence = occurrence
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.subheadline)
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.bordered)
+            .tint(.secondary)
+            .accessibilityLabel("Ödemeyi düzenle")
+
+            Button {
+                togglePayment(occurrence)
+            } label: {
+                Text("Ödendi")
+                    .font(.caption.weight(.semibold))
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding(.vertical, 6)
     }
 
-    private func updatePayment(_ payment: DemoPayment) {
-        guard let index = payments.firstIndex(
-            where: { $0.id == payment.id }
-        ) else {
-            return
+    private func generatePayments() {
+        do {
+            try PaymentOccurrenceService.generateOccurrences(
+                for: currentMonth,
+                context: modelContext
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
         }
-
-        payments[index] = payment
     }
 
-    private func formatCurrency(_ amount: Decimal) -> String {
+    private func togglePayment(
+        _ occurrence: PaymentOccurrence
+    ) {
+        occurrence.isPaid = true
+        occurrence.paidDate = Date()
+
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private func formatCurrency(
+        _ amount: Decimal
+    ) -> String {
         amount.formatted(
             .currency(code: "TRY")
-                .locale(Locale(identifier: "tr_TR"))
+                .locale(trLocale)
         )
     }
 }
