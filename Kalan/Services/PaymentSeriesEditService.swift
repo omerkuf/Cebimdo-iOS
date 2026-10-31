@@ -33,6 +33,7 @@ struct PaymentSeriesEditService {
     static func changeFutureDates(
         occurrence: PaymentOccurrence,
         newDate: Date,
+        newAmount: Decimal,
         context: ModelContext,
         calendar: Calendar = .current
     ) throws {
@@ -97,7 +98,7 @@ struct PaymentSeriesEditService {
         // Kullanıcının seçtiği tarihte yeni bir seri başlatılır.
         let newPayment = Payment(
             name: payment.name,
-            amount: payment.amount,
+            amount: newAmount,
             category: payment.category,
             startDate: newDay,
             recurrence: .monthly,
@@ -152,6 +153,7 @@ struct PaymentSeriesEditService {
             item.paymentID = newPayment.id
             item.scheduledDate = newScheduledDate
             item.dueDate = newScheduledDate
+            item.amount = newAmount
         }
 
         try context.save()

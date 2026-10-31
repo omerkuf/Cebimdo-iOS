@@ -349,7 +349,8 @@ struct TransactionsView: View {
                             showDeleteIncome = incomeToDelete != nil
                         } label: {
                             Image(systemName: "trash")
-                                .frame(width: 30, height: 30)
+                                .font(.system(size: 14))
+                                .frame(width: 20, height: 24)
                         }
                         .buttonStyle(.bordered)
                         .tint(.red)
@@ -397,13 +398,15 @@ struct TransactionsView: View {
 
                     ForEach(filteredOccurrences) { occurrence in
 
-                        HStack(spacing: 10) {
+                        HStack(spacing: 6) {
 
                             VStack(alignment: .leading, spacing: 5) {
                                 Text(occurrence.name)
                                     .font(.subheadline.weight(.semibold))
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .layoutPriority(1)
 
                                 Text(
                                     occurrence.dueDate.formatted(
@@ -426,6 +429,7 @@ struct TransactionsView: View {
                                 Text(formatCurrency(occurrence.amount))
                                     .font(.caption.weight(.medium))
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
                             Spacer(minLength: 4)
 
@@ -433,7 +437,8 @@ struct TransactionsView: View {
                                 selectedOccurrence = occurrence
                             } label: {
                                 Image(systemName: "pencil")
-                                    .frame(width: 30, height: 30)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .frame(width: 24, height: 24)
                             }
                             .buttonStyle(.bordered)
                             .tint(.secondary)
@@ -448,7 +453,8 @@ struct TransactionsView: View {
                                 showDeletePayment = paymentToDelete != nil
                             } label: {
                                 Image(systemName: "trash")
-                                    .frame(width: 30, height: 30)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .frame(width: 24, height: 24)
                             }
                             .buttonStyle(.bordered)
                             .tint(.red)

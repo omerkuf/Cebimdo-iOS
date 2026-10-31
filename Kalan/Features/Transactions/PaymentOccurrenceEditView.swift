@@ -175,7 +175,8 @@ struct PaymentOccurrenceEditView: View {
             do {
                 try PaymentSeriesEditService.changeFutureDates(
                     occurrence: occurrence,
-                    newDate: dueDate,
+                    newDate: occurrence.dueDate,
+                    newAmount: amount,
                     context: modelContext
                 )
 
