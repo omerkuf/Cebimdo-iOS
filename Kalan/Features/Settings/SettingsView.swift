@@ -53,9 +53,10 @@ struct SettingsView: View {
 
                 Section("Görünüm") {
                     Picker("Tema", selection: $appearance) {
-                        Text("Sistem").tag("system")
-                        Text("Açık").tag("light")
-                        Text("Koyu").tag("dark")
+                        ForEach(AppAppearance.allCases) { option in
+                            Text(option.title)
+                                .tag(option.rawValue)
+                        }
                     }
                 }
 

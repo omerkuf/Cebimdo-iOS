@@ -3,10 +3,18 @@ import SwiftData
 
 @main
 struct KalanApp: App {
+    
+    @AppStorage("appearance")
+    private var appearance = AppAppearance.system.rawValue
 
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .preferredColorScheme(
+                    AppAppearance(
+                        rawValue: appearance
+                    )?.colorScheme
+                )
         }
         .modelContainer(for: [
             Income.self,
