@@ -64,6 +64,15 @@ struct AssetsView: View {
             $0.symbol != "XAU" && $0.symbol != "XAG"
         }
     }
+    
+    private func parseMarketDate(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [
+            .withInternetDateTime,
+            .withFractionalSeconds
+        ]
+        return formatter.date(from: value)
+    }
 
     var body: some View {
         NavigationStack {
@@ -195,8 +204,20 @@ struct AssetsView: View {
             }
             
             // Altın ve gümüş fiyatı güncelleme tarihi
-            if let updatedAt = viewModel.metals?.updatedAt {
-                Text("Maden fiyatı zamanı: \(updatedAt)")
+            // Altın ve gümüş fiyatı güncelleme tarihi
+            if let updatedAt = viewModel.metals?.updatedAt,
+               let date = parseMarketDate(updatedAt) {
+
+                let formattedDate = date.formatted(
+                    .dateTime
+                        .day()
+                        .month(.wide)
+                        .hour()
+                        .minute()
+                        .locale(Locale(identifier: "tr_TR"))
+                )
+
+                Text("Maden fiyatı: \(formattedDate)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

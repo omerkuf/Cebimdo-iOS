@@ -11,6 +11,7 @@ struct MetalsPriceResponse: Decodable {
     let goldTRYPerGram: Decimal
     let silverTRYPerGram: Decimal
     let updatedAt: String?
+    let isStale: Bool?
 }
 
 struct MetalsPriceService {
