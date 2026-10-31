@@ -149,6 +149,20 @@ struct IncomeEditView: View {
             .navigationTitle("Geliri Düzenle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+
+                    Button("Tamam") {
+                        UIApplication.shared.sendAction(
+                            #selector(UIResponder.resignFirstResponder),
+                            to: nil,
+                            from: nil,
+                            for: nil
+                        )
+                    }
+                    .fontWeight(.semibold)
+                }
 
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Vazgeç") {
@@ -163,7 +177,10 @@ struct IncomeEditView: View {
                     .disabled(
                         name.trimmingCharacters(
                             in: .whitespacesAndNewlines
-                        ).isEmpty || amount <= 0
+                        ).isEmpty
+                        || amount <= 0
+                        || amount > Decimal(99_999_999)
+                            + Decimal(string: "0.99")!
                     )
                 }
             }

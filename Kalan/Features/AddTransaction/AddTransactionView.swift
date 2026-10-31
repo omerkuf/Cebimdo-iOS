@@ -40,6 +40,8 @@ struct AddTransactionView: View {
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         && amount > .zero
+        && amount <= Decimal(99_999_999)
+            + Decimal(string: "0.99")!
     }
 
     var body: some View {
@@ -120,6 +122,21 @@ struct AddTransactionView: View {
                 }
             }
             .navigationTitle("Yeni İşlem")
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+
+                    Button("Tamam") {
+                        UIApplication.shared.sendAction(
+                            #selector(UIResponder.resignFirstResponder),
+                            to: nil,
+                            from: nil,
+                            for: nil
+                        )
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
             .alert("Başarılı", isPresented: $showSuccess) {
                 Button("Tamam", role: .cancel) { }
             } message: {

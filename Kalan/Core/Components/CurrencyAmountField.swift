@@ -15,6 +15,9 @@ struct CurrencyAmountField: View {
 
     @State private var text = ""
     @FocusState private var isFocused: Bool
+    
+    private let maxAmount = Decimal(999_999_999)
+        + Decimal(string: "0.99")!
 
     var body: some View {
         TextField(title, text: $text)
@@ -57,22 +60,16 @@ struct CurrencyAmountField: View {
                 }
 
                 if let value = parseAmount(cleaned) {
-                    amount = value
-                }
-            }
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
 
-                    Button("Tamam") {
-                        UIApplication.shared.sendAction(
-                            #selector(UIResponder.resignFirstResponder),
-                            to: nil,
-                            from: nil,
-                            for: nil
-                        )
+                    let maxAmount = Decimal(99_999_999)
+                        + Decimal(string: "0.99")!
+
+                    guard value <= maxAmount else {
+                        text = editingAmount
+                        return
                     }
-                    .fontWeight(.semibold)
+
+                    amount = value
                 }
             }
     }

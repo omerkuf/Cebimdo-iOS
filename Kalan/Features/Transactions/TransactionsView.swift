@@ -309,7 +309,8 @@ struct TransactionsView: View {
                         Text(formatCurrency(income.amount))
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.75)
+                            .minimumScaleFactor(0.65)
+                            .layoutPriority(1)
 
                         // Geliri düzenle
                         Button {
