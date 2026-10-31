@@ -125,5 +125,112 @@ final class IncomeHistoryServiceTests: XCTestCase {
         XCTAssertEqual(decemberAmount, 35_000)
         XCTAssertEqual(februaryAmount, 45_000)
     }
+    
+    // Tek dönemlik değişiklik diğer ayları etkilememeli.
+    func testOnlySelectedIncomeOccurrenceChanges() {
+        let income = makeIncome()
+
+        let novemberOverride = IncomeOccurrenceOverride(
+            incomeID: income.id,
+            occurrenceDate: makeDate(2026, 11, 1),
+            amount: 50_000
+        )
+
+        let octoberAmount = IncomeHistoryService.amount(
+            for: income,
+            on: makeDate(2026, 10, 1),
+            changes: [],
+            overrides: [novemberOverride]
+        )
+
+        let novemberAmount = IncomeHistoryService.amount(
+            for: income,
+            on: makeDate(2026, 11, 1),
+            changes: [],
+            overrides: [novemberOverride]
+        )
+
+        let decemberAmount = IncomeHistoryService.amount(
+            for: income,
+            on: makeDate(2026, 12, 1),
+            changes: [],
+            overrides: [novemberOverride]
+        )
+
+        XCTAssertEqual(octoberAmount, 30_000)
+        XCTAssertEqual(novemberAmount, 50_000)
+        XCTAssertEqual(decemberAmount, 30_000)
+    }
+    
+    // Tek dönemlik özel tutar, ileriye dönük tutarı ezmeli.
+    func testOccurrenceOverrideTakesPriority() {
+        let income = makeIncome()
+
+        let futureChange = IncomeAmountChange(
+            incomeID: income.id,
+            effectiveDate: makeDate(2026, 11, 1),
+            amount: 40_000
+        )
+
+        let decemberOverride = IncomeOccurrenceOverride(
+            incomeID: income.id,
+            occurrenceDate: makeDate(2026, 12, 1),
+            amount: 55_000
+        )
+
+        let decemberAmount = IncomeHistoryService.amount(
+            for: income,
+            on: makeDate(2026, 12, 1),
+            changes: [futureChange],
+            overrides: [decemberOverride]
+        )
+
+        let januaryAmount = IncomeHistoryService.amount(
+            for: income,
+            on: makeDate(2027, 1, 1),
+            changes: [futureChange],
+            overrides: [decemberOverride]
+        )
+
+        XCTAssertEqual(decemberAmount, 55_000)
+        XCTAssertEqual(januaryAmount, 40_000)
+    }
+    
+    
+    // Aylık maaş ve tek seferlik prim aynı ayda toplanmalı.
+    func testMonthlyTotalWithOneTimeBonus() {
+        let salary = makeIncome()
+
+        let bonus = Income(
+            name: "Prim",
+            amount: 10_000,
+            category: "Prim / İkramiye",
+            startDate: makeDate(2026, 11, 15),
+            recurrence: .once,
+            note: ""
+        )
+
+        let octoberTotal = IncomeHistoryService.monthlyTotal(
+            incomes: [salary, bonus],
+            changes: [],
+            month: makeDate(2026, 10, 1)
+        )
+
+        let novemberTotal = IncomeHistoryService.monthlyTotal(
+            incomes: [salary, bonus],
+            changes: [],
+            month: makeDate(2026, 11, 1)
+        )
+
+        let decemberTotal = IncomeHistoryService.monthlyTotal(
+            incomes: [salary, bonus],
+            changes: [],
+            month: makeDate(2026, 12, 1)
+        )
+
+        XCTAssertEqual(octoberTotal, 30_000)
+        XCTAssertEqual(novemberTotal, 40_000)
+        XCTAssertEqual(decemberTotal, 30_000)
+    }
 }
 
