@@ -321,5 +321,60 @@ final class PaymentSeriesEditServiceTests: XCTestCase {
             1
         )
     }
+    
+    // Geçersiz tarihte kayıtlar değişmeden korunmalı.
+    func testInvalidDateDoesNotModifyPayments() throws {
+
+        let context = try makeContext()
+        let payment = makePayment()
+
+        context.insert(payment)
+        try context.save()
+
+        // Kasım ödemesini oluştur.
+        try PaymentOccurrenceService.generateOccurrences(
+            for: makeDate(2026, 11, 1),
+            context: context
+        )
+
+        let november = try occurrence(
+            in: 11,
+            context: context
+        )
+
+        let originalDate = november.dueDate
+        let originalPaymentID = november.paymentID
+
+        // Kasım ödemesini yanlışlıkla Aralık'a taşımayı dene.
+        XCTAssertThrowsError(
+            try PaymentSeriesEditService.changeFutureDates(
+                occurrence: november,
+                newDate: makeDate(2026, 12, 20),
+                context: context
+            )
+        ) { error in
+            guard case PaymentSeriesEditError.invalidDate = error else {
+                XCTFail("Beklenmeyen hata: \(error)")
+                return
+            }
+        }
+
+        // Kayıt hâlâ aynı tarihte kalmalı.
+        let savedNovember = try occurrence(
+            in: 11,
+            context: context
+        )
+
+        XCTAssertEqual(savedNovember.dueDate, originalDate)
+        XCTAssertEqual(savedNovember.paymentID, originalPaymentID)
+
+        // Yeni bir ödeme serisi oluşmamalı.
+        let payments = try context.fetch(
+            FetchDescriptor<Payment>()
+        )
+
+        XCTAssertEqual(payments.count, 1)
+    }
+
 }
 
