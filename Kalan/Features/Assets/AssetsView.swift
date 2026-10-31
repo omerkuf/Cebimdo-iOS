@@ -84,36 +84,31 @@ struct AssetsView: View {
                     if assets.isEmpty {
                         emptyState
                     } else {
+                        VStack(spacing: 0) {
+                            ForEach(assets) { asset in
+                                assetRow(asset)
 
-                        if !preciousMetals.isEmpty {
-                            assetSection(
-                                title: "Değerli Madenler",
-                                items: preciousMetals
-                            )
+                                if asset.id != assets.last?.id {
+                                    Divider()
+                                        .padding(.leading, 54)
+                                }
+                            }
                         }
-
-                        if !currencies.isEmpty {
-                            assetSection(
-                                title: "Dövizler",
-                                items: currencies
-                            )
-                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                        )
                     }
+
+                    addAssetButton
                 }
                 .padding(16)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(AssetsColors.background.ignoresSafeArea())
+            .tint(AssetsColors.primaryGreen)
             .navigationTitle("Varlıklarım")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showAddAsset = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Yeni varlık ekle")
-                }
-            }
             .sheet(isPresented: $showAddAsset) {
                 AddAssetView()
             }
@@ -143,13 +138,46 @@ struct AssetsView: View {
     }
 
     private var portfolioSummary: some View {
+        VStack(alignment: .leading, spacing: 14) {
 
-        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Toplam Varlık Değerim")
+                    .font(.custom("AvenirNext-DemiBold", size: 15))
+                    .foregroundStyle(.white.opacity(0.9))
 
-            Text("Portföyüm")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                Spacer()
 
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.title3)
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+
+            if let portfolioTotal {
+                Text(
+                    viewModel.formattedAmount(
+                        portfolioTotal,
+                        currency: selectedCurrency
+                    )
+                )
+                .font(.custom("AvenirNext-Bold", size: 29))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+
+                Text("Güncel piyasa değerleri ile")
+                    .font(.custom("AvenirNext-Medium", size: 12))
+                    .foregroundStyle(.white.opacity(0.85))
+            } else {
+                Text(
+                    assets.isEmpty
+                        ? "Henüz varlık eklenmedi"
+                        : "Portföy hesaplanıyor..."
+                )
+                .font(.custom("AvenirNext-DemiBold", size: 20))
+                .foregroundStyle(.white)
+            }
+
+            // TRY, USD ve EUR seçimi korunuyor.
             Picker(
                 "Görüntüleme Para Birimi",
                 selection: $selectedCurrency
@@ -159,52 +187,59 @@ struct AssetsView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .tint(AssetsColors.primaryGreen)
 
-            if let portfolioTotal {
-
-                Text(
-                    viewModel.formattedAmount(
-                        portfolioTotal,
-                        currency: selectedCurrency
-                    )
-                )
-                .font(.system(size: 28, weight: .bold))
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
-
-                Text("Toplam tahmini portföy değeri")
+            if viewModel.isLoading || viewModel.isLoadingMetals {
+                ProgressView("Fiyatlar güncelleniyor...")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
-
-            } else {
-
-                Text("Henüz hesaplanmadı")
-                    .font(.title2.bold())
-
-                Text("Döviz fiyatları henüz alınamadı.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if viewModel.isLoading {
-                ProgressView("Kurlar güncelleniyor...")
-                    .font(.caption)
+                    .tint(.white)
+                    .foregroundStyle(.white)
             }
 
             if let error = viewModel.errorMessage {
                 Text(error)
                     .font(.caption)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.white)
             }
+
+            HStack(spacing: 8) {
+                Image(systemName: "wallet.pass")
+
+                Text("\(assets.count) varlık kaydı")
+
+                Spacer()
+
+                Button {
+                    Task {
+                        await viewModel.refreshIfNeeded(
+                            needsMetals: assets.contains {
+                                $0.symbol == "XAU" || $0.symbol == "XAG"
+                            },
+                            force: true
+                        )
+                    }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(width: 32, height: 32)
+                        .background(
+                            Circle()
+                                .fill(.white.opacity(0.15))
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.isLoading)
+                .accessibilityLabel("Fiyatları yenile")
+            }
+            .font(.caption)
+            .foregroundStyle(.white.opacity(0.9))
 
             if let lastUpdated = viewModel.lastUpdated {
                 Text("Kur tarihi: \(lastUpdated)")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.8))
             }
-            
-            // Altın ve gümüş fiyatı güncelleme tarihi
-            // Altın ve gümüş fiyatı güncelleme tarihi
+
             if let updatedAt = viewModel.metals?.updatedAt,
                let date = parseMarketDate(updatedAt) {
 
@@ -219,41 +254,46 @@ struct AssetsView: View {
 
                 Text("Maden fiyatı: \(formattedDate)")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack {
-                Image(systemName: "wallet.pass")
-                    .foregroundStyle(.blue)
-
-                Text("\(assets.count) varlık kaydı")
-                    .font(.caption.weight(.medium))
-
-                Spacer()
-
-                Button {
-                    Task {
-                        await viewModel.refreshIfNeeded(
-                            needsMetals: assets.contains {
-                                $0.symbol == "XAU" || $0.symbol == "XAG"
-                            },
-                            force: true
-                        )
-                    }
-                } label: {
-                    Label("Yenile", systemImage: "arrow.clockwise")
-                        .font(.caption)
-                }
-                .disabled(viewModel.isLoading)
+                    .foregroundStyle(.white.opacity(0.8))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
+        .background {
+            RoundedRectangle(cornerRadius: 22)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.02, green: 0.35, blue: 0.20),
+                            AssetsColors.primaryGreen,
+                            Color(red: 0.02, green: 0.56, blue: 0.29)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        }
     }
+
+    
+    private var addAssetButton: some View {
+        Button {
+            showAddAsset = true
+        } label: {
+            Label("Varlık Ekle", systemImage: "plus")
+                .font(.custom("AvenirNext-DemiBold", size: 16))
+                .foregroundStyle(AssetsColors.primaryGreen)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(
+                    Capsule()
+                        .fill(AssetsColors.lightGreen)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Yeni varlık ekle")
+    }
+
 
     private var emptyState: some View {
         VStack(spacing: 16) {
@@ -316,78 +356,119 @@ struct AssetsView: View {
 
     private func assetRow(_ asset: AssetHolding) -> some View {
 
-        HStack(spacing: 12) {
+        HStack(alignment: .center, spacing: 10) {
 
-            Image(
-                systemName: AssetType(
-                    rawValue: asset.symbol.lowercased()
-                )?.icon ?? "wallet.pass"
-            )
-            .font(.title3)
-            .foregroundStyle(.blue)
-            .frame(width: 36, height: 36)
-            .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-
-            VStack(alignment: .leading, spacing: 5) {
-
-                Text(asset.name)
-                    .font(.subheadline.weight(.semibold))
-
-                Text(
-                    "\(formatQuantity(asset.quantity)) \(asset.unit)"
+            // Şimdilik SF Symbol kullanıyoruz.
+            // Sonrasında altın, gümüş ve döviz görsellerini Assets'e ekleyeceğiz.
+            Image(systemName: assetIcon(for: asset.symbol))
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(assetIconColor(for: asset.symbol))
+                .frame(width: 40, height: 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(AssetsColors.lightGreen)
                 )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(asset.name)
+                    .font(.custom("AvenirNext-DemiBold", size: 14))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+
+                Text("\(formatQuantity(asset.quantity)) \(asset.unit)")
+                    .font(.custom("AvenirNext-Regular", size: 12))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .trailing, spacing: 8) {
+
                 if let value = viewModel.convertedAmount(
                     quantity: asset.quantity,
                     symbol: asset.symbol,
                     targetCurrency: selectedCurrency
                 ) {
-
                     Text(
                         viewModel.formattedAmount(
                             value,
                             currency: selectedCurrency
                         )
                     )
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.green)
-
+                    .font(.custom("AvenirNext-DemiBold", size: 14))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 } else {
-
-                    Text("Güncel değer alınamadı")
+                    Text("Değer alınamadı")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
-            }
 
-            Spacer()
+                HStack(spacing: 8) {
 
-            Button {
-                selectedAsset = asset
-            } label: {
-                Image(systemName: "pencil")
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.bordered)
-            .tint(.secondary)
-            .accessibilityLabel("\(asset.name) düzenle")
+                    Button {
+                        selectedAsset = asset
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 13, weight: .medium))
+                            .frame(width: 30, height: 30)
+                            .foregroundStyle(.secondary)
+                            .background(
+                                Circle()
+                                    .fill(Color(.tertiarySystemGroupedBackground))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(asset.name) düzenle")
 
-            Button(role: .destructive) {
-                assetToDelete = asset
-                showDeleteConfirmation = true
-            } label: {
-                Image(systemName: "trash")
-                    .frame(width: 32, height: 32)
+                    Button(role: .destructive) {
+                        assetToDelete = asset
+                        showDeleteConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 13, weight: .medium))
+                            .frame(width: 30, height: 30)
+                            .foregroundStyle(.red)
+                            .background(
+                                Circle()
+                                    .fill(Color.red.opacity(0.08))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(asset.name) sil")
+                }
             }
-            .buttonStyle(.bordered)
-            .tint(.red)
-            .accessibilityLabel("\(asset.name) sil")
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 12)
     }
+    
+    
+    private func assetIcon(for symbol: String) -> String {
+        switch symbol.uppercased() {
+        case "XAU":
+            return "circle.hexagongrid.fill"
+        case "XAG":
+            return "square.stack.3d.up.fill"
+        case "USD", "EUR", "GBP", "CHF":
+            return "dollarsign.circle.fill"
+        default:
+            return "wallet.pass.fill"
+        }
+    }
+
+    private func assetIconColor(for symbol: String) -> Color {
+        switch symbol.uppercased() {
+        case "XAU":
+            return Color(red: 0.88, green: 0.62, blue: 0.06)
+        case "XAG":
+            return .gray
+        default:
+            return AssetsColors.primaryGreen
+        }
+    }
+
+
 
     private func deleteAsset() {
         guard let assetToDelete else { return }
