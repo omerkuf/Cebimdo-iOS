@@ -10,6 +10,7 @@ struct KalanApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .font(KalanFont.body)
                 .preferredColorScheme(
                     AppAppearance(
                         rawValue: appearance

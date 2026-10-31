@@ -446,6 +446,7 @@ struct DashboardView: View {
                 selectedTab = .add
             } label: {
                 Label("Gelir Ekle", systemImage: "plus")
+                    .font(KalanFont.button)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -458,6 +459,7 @@ struct DashboardView: View {
                     "Ödeme Ekle",
                     systemImage: "calendar.badge.plus"
                 )
+                .font(KalanFont.button)
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
