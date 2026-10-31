@@ -246,36 +246,16 @@ struct IncomeEditView: View {
 
             }
             else {
-
-            // Bu ve sonraki gelirlerdeki eski tutar değişikliklerini temizle
-            let futureChanges = incomeChanges.filter {
-                $0.incomeID == income.id &&
-                calendar.startOfDay(for: $0.effectiveDate) >= effectiveDay
-            }
-
-            futureChanges.forEach {
-                modelContext.delete($0)
-            }
-
-            // Gelecek dönemlere ait özel tutarları da temizle
-            let futureOverrides = incomeOverrides.filter {
-                $0.incomeID == income.id &&
-                calendar.startOfDay(for: $0.occurrenceDate) >= effectiveDay
-            }
-
-            futureOverrides.forEach {
-                modelContext.delete($0)
-            }
-
-            // Yeni tutar, seçilen tarihten itibaren bütün dönemlerde geçerli
-            modelContext.insert(
-                IncomeAmountChange(
-                    incomeID: income.id,
+                
+                IncomeSeriesEditService.updateThisAndFuture(
+                    income: income,
                     effectiveDate: effectiveDay,
-                    amount: amount
+                    amount: amount,
+                    changes: incomeChanges,
+                    overrides: incomeOverrides,
+                    context: modelContext
                 )
-            )
-        }
+            }
 
             income.name = trimmedName
             income.note = note
