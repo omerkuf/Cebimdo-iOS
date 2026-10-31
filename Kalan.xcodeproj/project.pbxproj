@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		66333DDE3095DAA900278481 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 662B9C32309511F80096D42A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 662B9C39309511F80096D42A;
+			remoteInfo = Kalan;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		662B9C3A309511F80096D42A /* Kalan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kalan.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		66333DDA3095DAA800278481 /* KalanTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KalanTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +27,22 @@
 			path = Kalan;
 			sourceTree = "<group>";
 		};
+		66333DDB3095DAA900278481 /* KalanTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KalanTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		662B9C37309511F80096D42A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		66333DD73095DAA800278481 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				662B9C3C309511F80096D42A /* Kalan */,
+				66333DDB3095DAA900278481 /* KalanTests */,
 				662B9C3B309511F80096D42A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				662B9C3A309511F80096D42A /* Kalan.app */,
+				66333DDA3095DAA800278481 /* KalanTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +95,29 @@
 			productReference = 662B9C3A309511F80096D42A /* Kalan.app */;
 			productType = "com.apple.product-type.application";
 		};
+		66333DD93095DAA800278481 /* KalanTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 66333DE03095DAA900278481 /* Build configuration list for PBXNativeTarget "KalanTests" */;
+			buildPhases = (
+				66333DD63095DAA800278481 /* Sources */,
+				66333DD73095DAA800278481 /* Frameworks */,
+				66333DD83095DAA800278481 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				66333DDF3095DAA900278481 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				66333DDB3095DAA900278481 /* KalanTests */,
+			);
+			name = KalanTests;
+			packageProductDependencies = (
+			);
+			productName = KalanTests;
+			productReference = 66333DDA3095DAA800278481 /* KalanTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +130,10 @@
 				TargetAttributes = {
 					662B9C39309511F80096D42A = {
 						CreatedOnToolsVersion = 26.0;
+					};
+					66333DD93095DAA800278481 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 662B9C39309511F80096D42A;
 					};
 				};
 			};
@@ -100,12 +152,20 @@
 			projectRoot = "";
 			targets = (
 				662B9C39309511F80096D42A /* Kalan */,
+				66333DD93095DAA800278481 /* KalanTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		662B9C38309511F80096D42A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		66333DD83095DAA800278481 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +182,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		66333DD63095DAA800278481 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		66333DDF3095DAA900278481 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 662B9C39309511F80096D42A /* Kalan */;
+			targetProxy = 66333DDE3095DAA900278481 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		662B9C45309511FA0096D42A /* Debug */ = {
@@ -310,6 +385,48 @@
 			};
 			name = Release;
 		};
+		66333DE13095DAA900278481 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A897WB49Q5;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kalanapp.KalanTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Kalan.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Kalan";
+			};
+			name = Debug;
+		};
+		66333DE23095DAA900278481 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A897WB49Q5;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kalanapp.KalanTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Kalan.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Kalan";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -327,6 +444,15 @@
 			buildConfigurations = (
 				662B9C48309511FA0096D42A /* Debug */,
 				662B9C49309511FA0096D42A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		66333DE03095DAA900278481 /* Build configuration list for PBXNativeTarget "KalanTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				66333DE13095DAA900278481 /* Debug */,
+				66333DE23095DAA900278481 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

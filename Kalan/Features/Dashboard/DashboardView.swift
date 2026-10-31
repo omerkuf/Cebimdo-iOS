@@ -32,6 +32,12 @@ struct DashboardView: View {
     
     @AppStorage("salaryDay")
     private var salaryDay = 15
+    
+    private var currentSalaryCycle: SalaryCycle? {
+        SalaryCycleService.cycle(
+            salaryDay: salaryDay
+        )
+    }
 
     private let calendar = Calendar.current
     private let trLocale = Locale(identifier: "tr_TR")
@@ -159,21 +165,17 @@ struct DashboardView: View {
     }
     
     private var salaryPeriodStart: Date {
-        BudgetCalculator.previousSalaryDate(
-            salaryDay: salaryDay
-        )
+        currentSalaryCycle?.startDate
+            ?? Calendar.current.startOfDay(for: Date())
     }
 
     private var salaryPeriodEnd: Date {
-        BudgetCalculator.nextSalaryDate(
-            salaryDay: salaryDay
-        )
+        currentSalaryCycle?.endDate
+            ?? Calendar.current.startOfDay(for: Date())
     }
 
     private var daysUntilSalary: Int {
-        BudgetCalculator.daysUntilSalary(
-            salaryDay: salaryDay
-        )
+        currentSalaryCycle?.daysRemaining ?? 1
     }
 
     private var periodOccurrences: [PaymentOccurrence] {
@@ -183,42 +185,12 @@ struct DashboardView: View {
         }
     }
 
-    private var periodIncome: Decimal {
-        incomes.reduce(.zero) { total, income in
-
-            let recurrence = RecurrenceType(
-                rawValue: income.recurrence
-            ) ?? .once
-
-            let months = [
-                salaryPeriodStart,
-                salaryPeriodEnd
-            ]
-
-            let dates = months.flatMap { month in
-                RecurrenceService.dates(
-                    in: month,
-                    from: income.startDate,
-                    recurrence: recurrence,
-                    endDate: income.endDate
-                )
-            }
-
-            let matchingDates = dates.filter {
-                $0 >= salaryPeriodStart &&
-                $0 < salaryPeriodEnd
-            }
-
-            return total + income.amount * Decimal(matchingDates.count)
-        }
-    }
-
     private var periodRemainingBudget: Decimal {
         let totalPayments = periodOccurrences.reduce(.zero) {
             $0 + $1.amount
         }
 
-        return periodIncome - totalPayments
+        return salaryPeriodIncome - totalPayments
     }
 
     private var dailyLimit: Decimal {
@@ -422,7 +394,7 @@ struct DashboardView: View {
                 amount: dailyLimit,
                 icon: "calendar",
                 color: .green,
-                subtitle: "Tahmini · ay sonuna"
+                subtitle: "Tahmini · sonraki maaşa kadar"
             )
         }
     }
