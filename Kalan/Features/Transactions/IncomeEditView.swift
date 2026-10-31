@@ -14,7 +14,8 @@ struct IncomeEditView: View {
     @Environment(\.modelContext) private var modelContext
 
     let income: Income
-
+    private let selectedDate: Date
+    
     @Query private var incomeChanges: [IncomeAmountChange]
     @Query private var incomeOverrides: [IncomeOccurrenceOverride]
 
@@ -34,6 +35,7 @@ struct IncomeEditView: View {
 
     init(income: Income, selectedDate: Date) {
         self.income = income
+        self.selectedDate = selectedDate
 
         _name = State(initialValue: income.name)
         _amount = State(initialValue: income.amount)
@@ -190,7 +192,6 @@ struct IncomeEditView: View {
                 Text(errorMessage)
             }
             .scrollDismissesKeyboard(.interactively)
-            .dismissKeyboardOnTap()
         }
         .onAppear {
             loadAmount()
@@ -215,7 +216,11 @@ struct IncomeEditView: View {
             in: .whitespacesAndNewlines
         )
 
-        guard !trimmedName.isEmpty, amount > 0 else {
+        guard !trimmedName.isEmpty,
+              amount > 0,
+              amount <= Decimal(99_999_999) + Decimal(string: "0.99")!,
+              effectiveDate >= Calendar.current.startOfDay(for: income.startDate)
+        else {
             return
         }
 
@@ -259,6 +264,15 @@ struct IncomeEditView: View {
 
             income.name = trimmedName
             income.note = note
+            
+            print("========== INCOME EDIT ==========")
+            print("Gelir adı:", income.name)
+            print("Gelir başlangıç tarihi:", income.startDate)
+            print("Düzenlenen dönem:", selectedDate)
+            print("Geçerlilik tarihi:", effectiveDate)
+            print("Yeni tutar:", amount)
+            print("Düzenleme kapsamı:", editScope)
+            print("=================================")
 
             try modelContext.save()
             dismiss()

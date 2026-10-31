@@ -30,8 +30,8 @@ struct TransactionsView: View {
     @State private var errorMessage: String?
     @State private var showError = false
     
-    @State private var selectedIncomeDate: Date = Date()
-    @State private var selectedIncome: Income?
+    @State private var selectedIncomeEdit: SelectedIncomeEdit?
+    
     @State private var incomeToDelete: Income?
     @State private var paymentToDelete: Payment?
     @State private var showDeleteIncome = false
@@ -79,6 +79,7 @@ struct TransactionsView: View {
             return
         }
 
+        // Gelire ait ileriye dönük tutar değişikliklerini sil
         let relatedChanges = incomeChanges.filter {
             $0.incomeID == incomeToDelete.id
         }
@@ -87,6 +88,16 @@ struct TransactionsView: View {
             modelContext.delete($0)
         }
 
+        // Gelire ait tek dönemlik özel tutarları sil
+        let relatedOverrides = incomeOverrides.filter {
+            $0.incomeID == incomeToDelete.id
+        }
+
+        relatedOverrides.forEach {
+            modelContext.delete($0)
+        }
+
+        // Gelir kaydını sil
         modelContext.delete(incomeToDelete)
 
         do {
@@ -157,10 +168,10 @@ struct TransactionsView: View {
                     occurrence: occurrence
                 )
             }
-            .sheet(item: $selectedIncome) { income in
+            .sheet(item: $selectedIncomeEdit) { selected in
                 IncomeEditView(
-                    income: income,
-                    selectedDate: selectedIncomeDate
+                    income: selected.income,
+                    selectedDate: selected.date
                 )
             }
             .alert("Hata", isPresented: $showError) {
@@ -316,18 +327,18 @@ struct TransactionsView: View {
 
                         // Geliri düzenle
                         Button {
-                            selectedIncomeDate = income.date
-
-                            selectedIncome = incomes.first {
+                            if let sourceIncome = incomes.first(where: {
                                 $0.id == income.sourceID
+                            }) {
+                                selectedIncomeEdit = SelectedIncomeEdit(
+                                    income: sourceIncome,
+                                    date: income.date
+                                )
                             }
                         } label: {
                             Image(systemName: "pencil")
                                 .frame(width: 30, height: 30)
                         }
-                        .buttonStyle(.bordered)
-                        .tint(.secondary)
-                        .accessibilityLabel("Geliri düzenle")
 
                         // Geliri sil
                         Button {
@@ -546,4 +557,10 @@ private struct IncomeDisplayItem: Identifiable {
     let category: String
     let date: Date
     let sourceID: UUID
+}
+
+private struct SelectedIncomeEdit: Identifiable {
+    let id = UUID()
+    let income: Income
+    let date: Date
 }
