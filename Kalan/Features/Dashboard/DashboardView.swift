@@ -220,6 +220,15 @@ struct DashboardView: View {
 
         return values.reduce(.zero, +)
     }
+    
+    private func parseMarketDate(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [
+            .withInternetDateTime,
+            .withFractionalSeconds
+        ]
+        return formatter.date(from: value)
+    }
 
     var body: some View {
         NavigationStack {
@@ -270,6 +279,7 @@ struct DashboardView: View {
             }
         }
     }
+    
 
     private var portfolioCard: some View {
 
@@ -315,6 +325,23 @@ struct DashboardView: View {
                     Text("Toplam tahmini portföy değerim")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    
+                    if let updatedAt = assetsViewModel.metals?.updatedAt,
+                       let date = parseMarketDate(updatedAt) {
+
+                        let formattedDate = date.formatted(
+                            .dateTime
+                                .day()
+                                .month(.wide)
+                                .hour()
+                                .minute()
+                                .locale(trLocale)
+                        )
+
+                        Text("Maden fiyatı: \(formattedDate)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
 
                 } else if assetsViewModel.isLoading ||
                             assetsViewModel.isLoadingMetals {
