@@ -16,6 +16,7 @@ struct DashboardView: View {
     @ObservedObject var assetsViewModel: AssetsViewModel
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @Query private var incomes: [Income]
     @Query private var payments: [Payment]
@@ -42,6 +43,17 @@ struct DashboardView: View {
 
     private let calendar = Calendar.current
     private let trLocale = Locale(identifier: "tr_TR")
+    
+    private var summaryColumns: [GridItem] {
+        if dynamicTypeSize.isAccessibilitySize {
+            return [GridItem(.flexible())]
+        }
+
+        return [
+            GridItem(.flexible(), spacing: 12),
+            GridItem(.flexible(), spacing: 12)
+        ]
+    }
 
     private var currentMonth: Date {
         Date()
@@ -389,10 +401,7 @@ struct DashboardView: View {
 
     private var summaryCards: some View {
         LazyVGrid(
-            columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ],
+            columns: summaryColumns,
             spacing: 12
         ) {
             SummaryCard(

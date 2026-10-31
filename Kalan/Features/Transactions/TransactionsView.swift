@@ -289,6 +289,8 @@ struct TransactionsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(income.name)
                                 .font(.subheadline.weight(.medium))
+                                .lineLimit(1)
+                                .truncationMode(.tail)
 
                             Text(income.category)
                                 .font(.caption)
@@ -389,6 +391,8 @@ struct TransactionsView: View {
                             VStack(alignment: .leading, spacing: 5) {
                                 Text(occurrence.name)
                                     .font(.subheadline.weight(.semibold))
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
 
                                 Text(
                                     occurrence.dueDate.formatted(

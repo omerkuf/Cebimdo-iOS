@@ -36,8 +36,10 @@ struct SummaryCard: View {
                 )
             )
             .font(.system(size: 21, weight: .bold))
-            .minimumScaleFactor(0.7)
             .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .allowsTightening(true)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(subtitle)
                 .font(.caption2)
