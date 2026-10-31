@@ -260,7 +260,23 @@ struct DashboardView: View {
                 }
                 .padding(16)
             }
-            .background(Color(.systemGroupedBackground))
+            .background {
+                ZStack {
+                    DashboardColors.background
+
+                    RadialGradient(
+                        colors: [
+                            DashboardColors.lightGreen,
+                            DashboardColors.background.opacity(0)
+                        ],
+                        center: .topTrailing,
+                        startRadius: 20,
+                        endRadius: 380
+                    )
+                }
+                .ignoresSafeArea()
+            }
+            .tint(DashboardColors.primaryGreen)
             .navigationTitle("KALAN")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -388,7 +404,7 @@ struct DashboardView: View {
 
                 HStack(spacing: 6) {
                     Image(systemName: "wallet.pass")
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(DashboardColors.primaryGreen)
 
                     Text("\(assetHoldings.count) varlık kaydı")
                         .font(.caption)
@@ -399,7 +415,13 @@ struct DashboardView: View {
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(.secondarySystemGroupedBackground))
+                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+            )
+            .shadow(
+                color: DashboardColors.primaryGreen.opacity(0.06),
+                radius: 12,
+                x: 0,
+                y: 5
             )
         }
         .buttonStyle(.plain)
@@ -430,7 +452,7 @@ struct DashboardView: View {
                 title: "Kalan Bütçem",
                 amount: remainingBudget,
                 icon: "wallet.pass",
-                color: .blue,
+                color: DashboardColors.primaryGreen,
                 subtitle: "Ödemeler düşüldü"
             )
 
@@ -453,9 +475,15 @@ struct DashboardView: View {
             } label: {
                 Label("Gelir Ekle", systemImage: "plus")
                     .font(KalanFont.button)
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
+                    .frame(height: 46)
+                    .background(
+                        Capsule()
+                            .fill(DashboardColors.primaryGreen)
+                    )
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
 
             Button {
                 selectedAddType = 1
@@ -466,9 +494,15 @@ struct DashboardView: View {
                     systemImage: "calendar.badge.plus"
                 )
                 .font(KalanFont.button)
+                .foregroundStyle(DashboardColors.primaryGreen)
                 .frame(maxWidth: .infinity)
+                .frame(height: 46)
+                .background(
+                    Capsule()
+                        .fill(DashboardColors.lightGreen)
+                )
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.plain)
         }
     }
 
@@ -529,8 +563,14 @@ struct DashboardView: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(.secondarySystemGroupedBackground))
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
+        .shadow(
+            color: DashboardColors.primaryGreen.opacity(0.04),
+            radius: 10,
+            x: 0,
+            y: 4
         )
     }
 
@@ -541,7 +581,7 @@ struct DashboardView: View {
         HStack(spacing: 10) {
 
             Image(systemName: "doc.text")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DashboardColors.primaryGreen)
                 .frame(width: 32, height: 32)
                 .background(Color(.tertiarySystemGroupedBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -594,6 +634,7 @@ struct DashboardView: View {
                     .font(.caption.weight(.semibold))
             }
             .buttonStyle(.borderedProminent)
+            .tint(DashboardColors.primaryGreen)
         }
         .padding(.vertical, 6)
     }
@@ -668,4 +709,30 @@ struct DashboardView: View {
                 .locale(trLocale)
         )
     }
+}
+
+private enum DashboardColors {
+    static let background = Color(
+        red: 240 / 255.0,
+        green: 248 / 255.0,
+        blue: 245 / 255.0
+    )
+
+    static let primaryGreen = Color(
+        red: 15 / 255.0,
+        green: 122 / 255.0,
+        blue: 67 / 255.0
+    )
+
+    static let lightGreen = Color(
+        red: 230 / 255.0,
+        green: 246 / 255.0,
+        blue: 237 / 255.0
+    )
+
+    static let accentGreen = Color(
+        red: 34 / 255.0,
+        green: 197 / 255.0,
+        blue: 94 / 255.0
+    )
 }

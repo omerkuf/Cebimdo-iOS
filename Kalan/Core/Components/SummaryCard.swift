@@ -49,8 +49,14 @@ struct SummaryCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemGroupedBackground))
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
+        .shadow(
+            color: .black.opacity(0.025),
+            radius: 8,
+            x: 0,
+            y: 3
         )
     }
 }
