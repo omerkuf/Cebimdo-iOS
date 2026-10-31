@@ -332,7 +332,13 @@ struct DashboardView: View {
                             currency: "TRY"
                         )
                     )
-                    .font(.system(size: 30, weight: .bold))
+                    .font(
+                        .custom(
+                            "AvenirNext-Bold",
+                            size: 30,
+                            relativeTo: .title
+                        )
+                    )
                     .foregroundStyle(.primary)
                     .minimumScaleFactor(0.7)
                     .lineLimit(1)
@@ -574,8 +580,8 @@ struct DashboardView: View {
                 selectedOccurrence = occurrence
             } label: {
                 Image(systemName: "pencil")
-                    .font(.subheadline)
-                    .frame(width: 32, height: 32)
+                    .font(.system(size: 16, weight: .medium))
+                    .frame(width: 24, height: 24)
             }
             .buttonStyle(.bordered)
             .tint(.secondary)

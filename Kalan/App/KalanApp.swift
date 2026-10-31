@@ -6,16 +6,33 @@ struct KalanApp: App {
     
     @AppStorage("appearance")
     private var appearance = AppAppearance.system.rawValue
+    
+    @State private var isShowingSplash = true
 
     var body: some Scene {
         WindowGroup {
-            MainTabView()
-                .font(KalanFont.body)
-                .preferredColorScheme(
-                    AppAppearance(
-                        rawValue: appearance
-                    )?.colorScheme
-                )
+            ZStack {
+                MainTabView()
+
+                if isShowingSplash {
+                    SplashView()
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
+            }
+            .font(KalanFont.body)
+            .preferredColorScheme(
+                AppAppearance(rawValue: appearance)?.colorScheme
+            )
+            .task {
+                guard isShowingSplash else { return }
+
+                try? await Task.sleep(for: .seconds(1.5))
+
+                withAnimation(.easeOut(duration: 0.25)) {
+                    isShowingSplash = false
+                }
+            }
         }
         .modelContainer(for: [
             Income.self,
