@@ -15,6 +15,7 @@ struct AnalyticsView: View {
     @Query private var payments: [Payment]
     @Query private var occurrences: [PaymentOccurrence]
     @Query private var incomeChanges: [IncomeAmountChange]
+    @Query private var incomeOverrides: [IncomeOccurrenceOverride]
 
     @State private var selectedMonth = Date()
 
@@ -27,7 +28,8 @@ struct AnalyticsView: View {
             incomes: incomes,
             payments: payments,
             occurrences: occurrences,
-            changes: incomeChanges
+            changes: incomeChanges,
+            overrides: incomeOverrides
         )
     }
 
@@ -37,7 +39,8 @@ struct AnalyticsView: View {
             incomes: incomes,
             payments: payments,
             occurrences: occurrences,
-            changes: incomeChanges
+            changes: incomeChanges,
+            overrides: incomeOverrides
         )
     }
 

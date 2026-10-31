@@ -14,7 +14,7 @@ struct AddTransactionView: View {
 
     @Binding var selectedType: Int
     @State private var name = ""
-    @State private var amountText = ""
+    @State private var amount: Decimal = .zero
     @State private var category = "Maaş"
     @State private var recurrence: RecurrenceType = .once
     @State private var selectedDate = Date()
@@ -37,20 +37,9 @@ struct AddTransactionView: View {
         selectedType == 0 ? incomeCategories : paymentCategories
     }
 
-    private var parsedAmount: Decimal? {
-        let normalized = amountText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: ",", with: ".")
-
-        return Decimal(
-            string: normalized,
-            locale: Locale(identifier: "en_US_POSIX")
-        )
-    }
-
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        && (parsedAmount ?? .zero) > .zero
+        && amount > .zero
     }
 
     var body: some View {
@@ -67,7 +56,7 @@ struct AddTransactionView: View {
                     .onChange(of: selectedType) { _, newValue in
                         category = newValue == 0 ? "Maaş" : "Fatura"
                         name = ""
-                        amountText = ""
+                        amount = .zero
                         note = ""
                         recurrence = .once
                         selectedDate = Date()
@@ -81,8 +70,10 @@ struct AddTransactionView: View {
                         text: $name
                     )
 
-                    TextField("Tutar (₺)", text: $amountText)
-                        .keyboardType(.decimalPad)
+                    CurrencyAmountField(
+                        title: "Tutar (₺)",
+                        amount: $amount
+                    )
 
                     Picker("Kategori", selection: $category) {
                         ForEach(categories, id: \.self) { item in
@@ -139,12 +130,13 @@ struct AddTransactionView: View {
             } message: {
                 Text("İşlem kaydedilemedi. Tekrar deneyin.")
             }
+            .scrollDismissesKeyboard(.interactively)
         }
     }
 
     private func saveTransaction() {
 
-        guard canSave, let amount = parsedAmount else {
+        guard canSave else {
             return
         }
 
@@ -193,7 +185,7 @@ struct AddTransactionView: View {
 
     private func resetFields() {
         name = ""
-        amountText = ""
+        amount = .zero
         note = ""
         selectedDate = Date()
         recurrence = .once

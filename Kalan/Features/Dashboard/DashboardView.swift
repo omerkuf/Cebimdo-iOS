@@ -21,6 +21,7 @@ struct DashboardView: View {
     @Query private var payments: [Payment]
     @Query private var assetHoldings: [AssetHolding]
     @Query private var incomeChanges: [IncomeAmountChange]
+    @Query private var incomeOverrides: [IncomeOccurrenceOverride]
 
     @Query(sort: \PaymentOccurrence.dueDate)
     private var occurrences: [PaymentOccurrence]
@@ -63,7 +64,8 @@ struct DashboardView: View {
         DashboardCalculator.monthlyIncome(
             incomes: incomes,
             month: Date(),
-            changes: incomeChanges
+            changes: incomeChanges,
+            overrides: incomeOverrides
         )
     }
 
@@ -145,7 +147,8 @@ struct DashboardView: View {
                     total += IncomeHistoryService.amount(
                         for: income,
                         on: date,
-                        changes: incomeChanges
+                        changes: incomeChanges,
+                        overrides: incomeOverrides
                     )
                 }
             }

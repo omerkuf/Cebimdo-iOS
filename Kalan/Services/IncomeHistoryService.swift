@@ -12,22 +12,29 @@ struct IncomeHistoryService {
     static func amount(
         for income: Income,
         on date: Date,
-        changes: [IncomeAmountChange]
+        changes: [IncomeAmountChange],
+        overrides: [IncomeOccurrenceOverride] = []
     ) -> Decimal {
 
         let calendar = Calendar.current
-        let occurrenceDay = calendar.startOfDay(for: date)
+
+        if let override = overrides.first(where: {
+            $0.incomeID == income.id &&
+            calendar.isDate($0.occurrenceDate, inSameDayAs: date)
+        }) {
+            return override.amount
+        }
 
         let applicableChange = changes
             .filter {
                 $0.incomeID == income.id &&
-                calendar.startOfDay(for: $0.effectiveDate) <= occurrenceDay
+                calendar.startOfDay(for: $0.effectiveDate) <=
+                    calendar.startOfDay(for: date)
             }
             .sorted {
                 if $0.effectiveDate == $1.effectiveDate {
                     return $0.createdAt > $1.createdAt
                 }
-
                 return $0.effectiveDate > $1.effectiveDate
             }
             .first
@@ -38,10 +45,11 @@ struct IncomeHistoryService {
     static func monthlyTotal(
         incomes: [Income],
         changes: [IncomeAmountChange],
-        month: Date
+        month: Date,
+        overrides: [IncomeOccurrenceOverride] = []
     ) -> Decimal {
 
-        incomes.reduce(Decimal.zero) { total, income in
+        incomes.reduce(.zero) { total, income in
 
             let dates = RecurrenceService.dates(
                 in: month,
@@ -52,17 +60,14 @@ struct IncomeHistoryService {
                 endDate: income.endDate
             )
 
-            let incomeTotal = dates.reduce(Decimal.zero) {
-                subtotal, date in
-
+            return total + dates.reduce(.zero) { subtotal, date in
                 subtotal + amount(
                     for: income,
                     on: date,
-                    changes: changes
+                    changes: changes,
+                    overrides: overrides
                 )
             }
-
-            return total + incomeTotal
         }
     }
 }

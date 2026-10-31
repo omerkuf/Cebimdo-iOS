@@ -50,12 +50,10 @@ struct PaymentOccurrenceEditView: View {
                     TextField("Ödeme Adı", text: $name)
                         .disabled(editScope == .thisAndFuture)
 
-                    TextField(
-                        "Tutar",
-                        value: $amount,
-                        format: .number
+                    CurrencyAmountField(
+                        title: "Tutar",
+                        amount: $amount
                     )
-                    .keyboardType(.decimalPad)
                     .disabled(editScope == .thisAndFuture)
 
                     DatePicker(
@@ -147,6 +145,8 @@ struct PaymentOccurrenceEditView: View {
             } message: {
                 Text(errorMessage)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .dismissKeyboardOnTap()
         }
     }
 

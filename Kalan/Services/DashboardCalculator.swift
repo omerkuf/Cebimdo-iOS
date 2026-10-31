@@ -12,13 +12,15 @@ struct DashboardCalculator {
     static func monthlyIncome(
         incomes: [Income],
         month: Date,
-        changes: [IncomeAmountChange] = []
+        changes: [IncomeAmountChange] = [],
+        overrides: [IncomeOccurrenceOverride] = []
     ) -> Decimal {
 
         IncomeHistoryService.monthlyTotal(
             incomes: incomes,
             changes: changes,
-            month: month
+            month: month,
+            overrides: overrides
         )
     }
 

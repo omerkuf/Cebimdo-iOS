@@ -33,13 +33,15 @@ struct AnalyticsCalculator {
         payments: [Payment],
         occurrences: [PaymentOccurrence],
         calendar: Calendar = .current,
-        changes: [IncomeAmountChange] = []
+        changes: [IncomeAmountChange] = [],
+        overrides: [IncomeOccurrenceOverride] = []
     ) -> AnalyticsMonthSummary {
 
         let incomeTotal = IncomeHistoryService.monthlyTotal(
             incomes: incomes,
             changes: changes,
-            month: month
+            month: month,
+            overrides: overrides
         )
 
         let paymentItems = payments.flatMap { payment in
@@ -109,7 +111,8 @@ struct AnalyticsCalculator {
         payments: [Payment],
         occurrences: [PaymentOccurrence],
         calendar: Calendar = .current,
-        changes: [IncomeAmountChange] = []
+        changes: [IncomeAmountChange] = [],
+        overrides: [IncomeOccurrenceOverride] = []
     ) -> [AnalyticsMonthSummary] {
 
         (-5...0).compactMap { offset in
@@ -128,7 +131,8 @@ struct AnalyticsCalculator {
                 payments: payments,
                 occurrences: occurrences,
                 calendar: calendar,
-                changes: changes
+                changes: changes,
+                overrides: overrides
             )
         }
     }

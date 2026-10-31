@@ -15,85 +15,116 @@ struct IncomeEditView: View {
 
     let income: Income
 
+    @Query private var incomeChanges: [IncomeAmountChange]
+    @Query private var incomeOverrides: [IncomeOccurrenceOverride]
+
     @State private var name: String
     @State private var amount: Decimal
     @State private var category: String
-    @State private var startDate: Date
-    @State private var recurrence: RecurrenceType
     @State private var note: String
+    @State private var effectiveDate: Date
 
+    @State private var editScope: IncomeEditScope = .thisAndFuture
     @State private var showError = false
-    
-    @State private var effectiveDate = Date()
-    
-    @Query private var incomeChanges: [IncomeAmountChange]
+    @State private var errorMessage = ""
 
-    private let categories = [
-        "Maaş",
-        "Prim / İkramiye",
-        "Ek Gelir",
-        "Kira Geliri",
-        "Diğer"
-    ]
+    private var isRecurring: Bool {
+        RecurrenceType(rawValue: income.recurrence) != .once
+    }
 
-    init(income: Income) {
+    init(income: Income, selectedDate: Date) {
         self.income = income
 
         _name = State(initialValue: income.name)
         _amount = State(initialValue: income.amount)
         _category = State(initialValue: income.category)
-        _startDate = State(initialValue: income.startDate)
-        _recurrence = State(
-            initialValue: RecurrenceType(
-                rawValue: income.recurrence
-            ) ?? .once
-        )
         _note = State(initialValue: income.note)
+        _effectiveDate = State(initialValue: selectedDate)
     }
 
     var body: some View {
         NavigationStack {
             Form {
-
                 Section("Gelir Bilgileri") {
+
                     TextField("Gelir Adı", text: $name)
 
-                    TextField(
-                        "Tutar",
-                        value: $amount,
-                        format: .number
+                    CurrencyAmountField(
+                        title: "Tutar (₺)",
+                        amount: $amount
                     )
-                    .keyboardType(.decimalPad)
-                    
+
                     DatePicker(
-                        "Yeni Tutarın Geçerli Olacağı Tarih",
+                        "Geçerlilik Tarihi",
                         selection: $effectiveDate,
                         in: income.startDate...,
                         displayedComponents: .date
                     )
+                    .datePickerStyle(.compact)
 
-                    Picker("Kategori", selection: $category) {
-                        ForEach(categories, id: \.self) {
-                            Text($0).tag($0)
+                    HStack {
+                        Text("Kategori")
+                        Spacer()
+                        Text(category)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if isRecurring {
+                    Section("Değişiklik Kapsamı") {
+
+                        ForEach(IncomeEditScope.allCases) { scope in
+                            Button {
+                                editScope = scope
+                            } label: {
+                                HStack(spacing: 12) {
+
+                                    Image(
+                                        systemName: editScope == scope
+                                        ? "largecircle.fill.circle"
+                                        : "circle"
+                                    )
+                                    .foregroundStyle(
+                                        editScope == scope
+                                        ? Color.blue
+                                        : Color.secondary
+                                    )
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(scope.title)
+                                            .font(.subheadline.weight(.medium))
+
+                                        Text(scope.description)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    Spacer()
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
-                    .disabled(true)
                 }
 
                 Section("Tekrarlama") {
-                    Picker("Sıklık", selection: $recurrence) {
-                        ForEach(RecurrenceType.allCases) { type in
-                            Text(type.title).tag(type)
-                        }
+                    HStack {
+                        Text("Sıklık")
+                        Spacer()
+                        Text(
+                            RecurrenceType(rawValue: income.recurrence)?
+                                .title ?? "Tek Seferlik"
+                        )
+                        .foregroundStyle(.secondary)
                     }
-                    .disabled(true)
 
-                    DatePicker(
-                        "Başlangıç Tarihi",
-                        selection: $startDate,
-                        displayedComponents: .date
-                    )
-                    .disabled(true)
+                    HStack {
+                        Text("Başlangıç Tarihi")
+                        Spacer()
+                        Text(income.startDate, style: .date)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Section("Açıklama") {
@@ -107,8 +138,9 @@ struct IncomeEditView: View {
 
                 Section {
                     Text(
-                        "Yeni gelir tutarı seçtiğiniz tarihten itibaren geçerli olur. " +
-                        "Önceki dönemlerin gelir tutarları korunur."
+                        !isRecurring || editScope == .onlyThis
+                        ? "Tutar yalnızca seçilen gelir döneminde değişir."
+                        : "Yeni tutar seçilen tarihten itibaren tüm dönemlere uygulanır. Sonraki tarihler için kaydedilmiş tutar değişikliklerinin üzerine yazılır."
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -117,6 +149,7 @@ struct IncomeEditView: View {
             .navigationTitle("Geliri Düzenle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Vazgeç") {
                         dismiss()
@@ -137,23 +170,26 @@ struct IncomeEditView: View {
             .alert("Hata", isPresented: $showError) {
                 Button("Tamam", role: .cancel) {}
             } message: {
-                Text("Gelir güncellenemedi.")
+                Text(errorMessage)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .dismissKeyboardOnTap()
         }
         .onAppear {
-            amount = IncomeHistoryService.amount(
-                for: income,
-                on: effectiveDate,
-                changes: incomeChanges
-            )
+            loadAmount()
         }
-        .onChange(of: effectiveDate) { _, newDate in
-            amount = IncomeHistoryService.amount(
-                for: income,
-                on: newDate,
-                changes: incomeChanges
-            )
+        .onChange(of: effectiveDate) { _, _ in
+            loadAmount()
         }
+    }
+
+    private func loadAmount() {
+        amount = IncomeHistoryService.amount(
+            for: income,
+            on: effectiveDate,
+            changes: incomeChanges,
+            overrides: incomeOverrides
+        )
     }
 
     private func saveChanges() {
@@ -169,47 +205,72 @@ struct IncomeEditView: View {
         let calendar = Calendar.current
         let effectiveDay = calendar.startOfDay(for: effectiveDate)
 
-        let existingChange = incomeChanges.first {
-            $0.incomeID == income.id &&
-            calendar.isDate(
-                $0.effectiveDate,
-                inSameDayAs: effectiveDay
-            )
-        }
+        do {
+            if !isRecurring || editScope == .onlyThis {
 
-        // Income.amount başlangıç tutarı olarak korunuyor.
-        // Güncel tutar, değişiklik geçmişinden hesaplanıyor.
-        let previousAmount = IncomeHistoryService.amount(
-            for: income,
-            on: effectiveDay,
-            changes: incomeChanges
-        )
+                // Yalnızca bu gelir döneminin tutarı
+                if let existing = incomeOverrides.first(where: {
+                    $0.incomeID == income.id &&
+                    calendar.isDate(
+                        $0.occurrenceDate,
+                        inSameDayAs: effectiveDay
+                    )
+                }) {
+                    existing.amount = amount
+                } else {
+                    modelContext.insert(
+                        IncomeOccurrenceOverride(
+                            incomeID: income.id,
+                            occurrenceDate: effectiveDay,
+                            amount: amount
+                        )
+                    )
+                }
 
-        if amount != previousAmount {
+            }
+            else {
 
-            if let existingChange {
-                existingChange.amount = amount
-            } else {
-                let change = IncomeAmountChange(
+            // Bu ve sonraki gelirlerdeki eski tutar değişikliklerini temizle
+            let futureChanges = incomeChanges.filter {
+                $0.incomeID == income.id &&
+                calendar.startOfDay(for: $0.effectiveDate) >= effectiveDay
+            }
+
+            futureChanges.forEach {
+                modelContext.delete($0)
+            }
+
+            // Gelecek dönemlere ait özel tutarları da temizle
+            let futureOverrides = incomeOverrides.filter {
+                $0.incomeID == income.id &&
+                calendar.startOfDay(for: $0.occurrenceDate) >= effectiveDay
+            }
+
+            futureOverrides.forEach {
+                modelContext.delete($0)
+            }
+
+            // Yeni tutar, seçilen tarihten itibaren bütün dönemlerde geçerli
+            modelContext.insert(
+                IncomeAmountChange(
                     incomeID: income.id,
                     effectiveDate: effectiveDay,
                     amount: amount
                 )
-
-                modelContext.insert(change)
-            }
+            )
         }
 
-        income.name = trimmedName
-        income.category = category
-        income.note = note
+            income.name = trimmedName
+            income.note = note
 
-        do {
             try modelContext.save()
             dismiss()
+
         } catch {
             modelContext.rollback()
+            errorMessage = error.localizedDescription
             showError = true
         }
     }
 }
+

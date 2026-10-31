@@ -17,6 +17,7 @@ struct TransactionsView: View {
 
     @Query private var payments: [Payment]
     @Query private var incomeChanges: [IncomeAmountChange]
+    @Query private var incomeOverrides: [IncomeOccurrenceOverride]
 
     @Query(sort: \PaymentOccurrence.dueDate)
     private var occurrences: [PaymentOccurrence]
@@ -29,6 +30,7 @@ struct TransactionsView: View {
     @State private var errorMessage: String?
     @State private var showError = false
     
+    @State private var selectedIncomeDate: Date = Date()
     @State private var selectedIncome: Income?
     @State private var incomeToDelete: Income?
     @State private var paymentToDelete: Payment?
@@ -156,7 +158,10 @@ struct TransactionsView: View {
                 )
             }
             .sheet(item: $selectedIncome) { income in
-                IncomeEditView(income: income)
+                IncomeEditView(
+                    income: income,
+                    selectedDate: selectedIncomeDate
+                )
             }
             .alert("Hata", isPresented: $showError) {
                 Button("Tamam", role: .cancel) {}
@@ -251,7 +256,8 @@ struct TransactionsView: View {
                     amount: IncomeHistoryService.amount(
                         for: income,
                         on: date,
-                        changes: incomeChanges
+                        changes: incomeChanges,
+                        overrides: incomeOverrides
                     ),
                     category: income.category,
                     date: date,
@@ -307,6 +313,8 @@ struct TransactionsView: View {
 
                         // Geliri düzenle
                         Button {
+                            selectedIncomeDate = income.date
+
                             selectedIncome = incomes.first {
                                 $0.id == income.sourceID
                             }
