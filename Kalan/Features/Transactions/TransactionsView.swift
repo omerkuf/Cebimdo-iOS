@@ -26,12 +26,12 @@ struct TransactionsView: View {
     @State private var paymentFilter = 0
     @State private var selectedMonth = Date()
     @State private var selectedOccurrence: PaymentOccurrence?
+    
+    @State private var selectedIncomeEdit: SelectedIncomeEdit?
 
     @State private var errorMessage: String?
     @State private var showError = false
-    
-    @State private var selectedIncomeEdit: SelectedIncomeEdit?
-    
+
     @State private var incomeToDelete: Income?
     @State private var paymentToDelete: Payment?
     @State private var showDeleteIncome = false
@@ -72,6 +72,86 @@ struct TransactionsView: View {
             $0 + $1.amount
         }
     }
+    
+    // Seçilen ayın gelir kayıtları
+    private var monthlyIncomeItems: [IncomeDisplayItem] {
+        incomes.flatMap { income in
+            RecurrenceService.dates(
+                in: selectedMonth,
+                from: income.startDate,
+                recurrence: RecurrenceType(
+                    rawValue: income.recurrence
+                ) ?? .once,
+                endDate: income.endDate
+            ).map { date in
+                IncomeDisplayItem(
+                    id: "\(income.id.uuidString)-\(date.timeIntervalSince1970)",
+                    name: income.name,
+                    amount: IncomeHistoryService.amount(
+                        for: income,
+                        on: date,
+                        changes: incomeChanges,
+                        overrides: incomeOverrides
+                    ),
+                    category: income.category,
+                    date: date,
+                    sourceID: income.id
+                )
+            }
+        }
+    }
+
+    // Gelirler ve ödemeler tek listede
+    private var transactionItems: [TransactionListItem] {
+
+        let incomeItems = monthlyIncomeItems.map {
+            TransactionListItem.income($0)
+        }
+
+        let paymentItems = monthlyOccurrences
+            .filter {
+                selectedType != 2 ||
+                (paymentFilter == 0 ? !$0.isPaid : $0.isPaid)
+            }
+            .map {
+                TransactionListItem.payment($0)
+            }
+
+        let items: [TransactionListItem]
+
+        switch selectedType {
+        case 1:
+            items = incomeItems
+        case 2:
+            items = paymentItems
+        default:
+            items = incomeItems + paymentItems
+        }
+
+        return items.sorted { $0.date > $1.date }
+    }
+
+    private var visibleTotal: Decimal {
+        switch selectedType {
+        case 1:
+            return monthlyIncomeItems.reduce(.zero) {
+                $0 + $1.amount
+            }
+        case 2:
+            return transactionItems.reduce(.zero) {
+                $0 + $1.amount
+            }
+        default:
+            let incomeTotal = monthlyIncomeItems.reduce(.zero) {
+                $0 + $1.amount
+            }
+            let paymentTotal = monthlyOccurrences.reduce(.zero) {
+                $0 + $1.amount
+            }
+            return incomeTotal - paymentTotal
+        }
+    }
+
     
     private func deleteIncome() {
 
@@ -135,24 +215,30 @@ struct TransactionsView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
+            
+            ScrollView {
+                VStack(spacing: 18) {
 
-                Picker("İşlem Türü", selection: $selectedType) {
-                    Text("Gelirlerim").tag(0)
-                    Text("Ödemelerim").tag(1)
+                    Picker("İşlem Türü", selection: $selectedType) {
+                        Text("Tümü").tag(0)
+                        Text("Gelirler").tag(1)
+                        Text("Ödemeler").tag(2)
+                    }
+                    .pickerStyle(.segmented)
+                    .tint(TransactionColors.primary)
+                    .padding(.horizontal, 16)
+
+                    monthSelector
+
+                    transactionContent
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-
-                monthSelector
-
-                if selectedType == 0 {
-                    incomeContent
-                } else {
-                    paymentContent
-                }
+                .padding(.top, 16)
             }
-            .padding(.top, 12)
+            .background(
+                TransactionColors.background
+                    .ignoresSafeArea()
+            )
+            .tint(TransactionColors.primary)
             .navigationTitle("İşlemlerim")
             .onAppear {
                 generatePayments()
@@ -215,6 +301,309 @@ struct TransactionsView: View {
             }
         }
     }
+        
+    private var transactionContent: some View {
+        VStack(spacing: 16) {
+
+            // Ödemeler sekmesinde eski durum filtresi korunuyor.
+            if selectedType == 2 {
+                Picker("Ödeme Durumu", selection: $paymentFilter) {
+                    Text("Ödenmemiş").tag(0)
+                    Text("Ödenmiş").tag(1)
+                }
+                .pickerStyle(.segmented)
+                .tint(TransactionColors.primary)
+            }
+
+            HStack {
+                Text("Aylık Net")
+                    .font(.custom("AvenirNext-DemiBold", size: 16))
+
+                Spacer()
+
+                Text(formatCurrency(visibleTotal))
+                    .font(.custom("AvenirNext-DemiBold", size: 16))
+                    .foregroundStyle(
+                        selectedType == 0
+                            ? TransactionColors.primary
+                            : TransactionColors.mainText
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+
+            if transactionItems.isEmpty {
+                ContentUnavailableView(
+                    "İşlem Bulunamadı",
+                    systemImage: "tray",
+                    description: Text(
+                        "Seçilen aya ve filtreye ait işlem bulunmuyor."
+                    )
+                )
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 28)
+            } else {
+                LazyVStack(spacing: 0) {
+                    ForEach(transactionItems) { item in
+                        transactionRow(item)
+
+                        if item.id != transactionItems.last?.id {
+                            Divider()
+                                .padding(.leading, 52)
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                )
+                .shadow(
+                    color: TransactionColors.primary.opacity(0.05),
+                    radius: 10,
+                    x: 0,
+                    y: 4
+                )
+            }
+
+            HStack {
+                Text(
+                    selectedType == 0
+                        ? "Net Tutar"
+                        : selectedType == 1
+                            ? "Toplam Gelir"
+                            : paymentFilter == 0
+                                ? "Toplam Bekleyen"
+                                : "Toplam Ödenen"
+                )
+                .font(.custom("AvenirNext-DemiBold", size: 14))
+
+                Spacer()
+
+                Text(formatCurrency(visibleTotal))
+                    .font(.custom("AvenirNext-DemiBold", size: 15))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+            )
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 24)
+    }
+    
+    
+    @ViewBuilder
+    private func transactionRow(
+        _ item: TransactionListItem
+    ) -> some View {
+
+        HStack(alignment: .center, spacing: 10) {
+
+            Image(systemName: transactionIcon(item))
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(transactionIconColor(item))
+                .frame(width: 38, height: 38)
+                .background(
+                    RoundedRectangle(cornerRadius: 11)
+                        .fill(transactionIconColor(item).opacity(0.10))
+                )
+
+            VStack(alignment: .leading, spacing: 4) {
+                switch item {
+                case .income(let income):
+                    Text(income.name)
+                        .font(.custom("AvenirNext-DemiBold", size: 14))
+                        .lineLimit(2)
+
+                case .payment(let occurrence):
+                    Text(occurrence.name)
+                        .font(.custom("AvenirNext-DemiBold", size: 14))
+                        .lineLimit(2)
+                }
+
+                Text(
+                    item.date.formatted(
+                        .dateTime.day().month(.wide)
+                            .locale(trLocale)
+                    )
+                )
+                .font(.custom("AvenirNext-Regular", size: 12))
+                .foregroundStyle(.secondary)
+
+                if case .payment(let occurrence) = item,
+                   !occurrence.isPaid,
+                   calendar.startOfDay(for: occurrence.dueDate)
+                        < calendar.startOfDay(for: Date()) {
+
+                    Text("Gecikmiş")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.red)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .trailing, spacing: 7) {
+
+                Text(transactionAmountText(item))
+                    .font(.custom("AvenirNext-DemiBold", size: 14))
+                    .foregroundStyle(
+                        transactionIsIncome(item)
+                            ? TransactionColors.primary
+                            : TransactionColors.mainText
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+
+                HStack(spacing: 8) {
+
+                    Button {
+                        switch item {
+                        case .income(let income):
+
+                            print("MAAŞ KALEM BUTONUNA BASILDI")
+                            print("Income ID:", income.sourceID)
+
+                            guard let source = incomes.first(where: {
+                                $0.id == income.sourceID
+                            }) else {
+                                errorMessage = "Düzenlenecek gelir kaydı bulunamadı."
+                                showError = true
+                                return
+                            }
+
+                            selectedIncomeEdit = SelectedIncomeEdit(
+                                income: source,
+                                date: income.date
+                            )
+
+                            print("IncomeEditView için seçim oluşturuldu")
+                        case .payment(let occurrence):
+                            selectedOccurrence = occurrence
+                        }
+                    } label: {
+                        Image(systemName: "pencil")
+                            .foregroundStyle(.secondary)
+                            .frame(width: 32, height: 32)
+                    }
+                    .accessibilityLabel("İşlemi düzenle")
+
+                    Button {
+                        switch item {
+                        case .income(let income):
+                            incomeToDelete = incomes.first {
+                                $0.id == income.sourceID
+                            }
+                            showDeleteIncome = incomeToDelete != nil
+
+                        case .payment(let occurrence):
+                            paymentToDelete = payments.first {
+                                $0.id == occurrence.paymentID
+                            }
+                            showDeletePayment = paymentToDelete != nil
+                        }
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundStyle(.red)
+                            .frame(width: 32, height: 32)
+                    }
+                    .accessibilityLabel("İşlemi sil")
+
+                    if case .payment(let occurrence) = item {
+                        Button {
+                            togglePaid(occurrence)
+                        } label: {
+                            Image(
+                                systemName: occurrence.isPaid
+                                    ? "arrow.uturn.backward.circle"
+                                    : "checkmark.circle"
+                            )
+                            .foregroundStyle(
+                                occurrence.isPaid
+                                    ? Color.secondary
+                                    : TransactionColors.primary
+                            )
+                            .frame(width: 32, height: 32)
+                        }
+                        .accessibilityLabel(
+                            occurrence.isPaid
+                                ? "Ödemeyi geri al"
+                                : "Ödendi olarak işaretle"
+                        )
+                    }
+                }
+                .font(.system(size: 15, weight: .medium))
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 12)
+    }
+    
+    
+    private func transactionIsIncome(
+        _ item: TransactionListItem
+    ) -> Bool {
+        if case .income = item {
+            return true
+        }
+        return false
+    }
+
+    private func transactionAmountText(
+        _ item: TransactionListItem
+    ) -> String {
+        let prefix = transactionIsIncome(item) ? "+" : "−"
+        return prefix + formatCurrency(item.amount)
+    }
+
+    private func transactionIcon(
+        _ item: TransactionListItem
+    ) -> String {
+        switch item {
+        case .income:
+            return "briefcase"
+
+        case .payment(let occurrence):
+            let name = occurrence.name.lowercased()
+
+            if name.contains("kira") {
+                return "house"
+            } else if name.contains("market") {
+                return "cart"
+            } else if name.contains("elektrik") {
+                return "bolt"
+            } else if name.contains("internet") {
+                return "wifi"
+            }
+            return "doc.text"
+        }
+    }
+
+    private func transactionIconColor(
+        _ item: TransactionListItem
+    ) -> Color {
+        switch item {
+        case .income:
+            return TransactionColors.primary
+
+        case .payment(let occurrence):
+            let name = occurrence.name.lowercased()
+
+            if name.contains("elektrik") {
+                return .orange
+            } else if name.contains("internet") {
+                return .purple
+            }
+            return .red
+        }
+    }
+
+
+
 
     private var monthSelector: some View {
         HStack {
@@ -246,6 +635,7 @@ struct TransactionsView: View {
             }
         }
         .padding(.horizontal)
+        .tint(TransactionColors.primary)
     }
 
     @ViewBuilder
@@ -570,3 +960,37 @@ private struct SelectedIncomeEdit: Identifiable {
     let income: Income
     let date: Date
 }
+
+private enum TransactionListItem: Identifiable {
+
+    case income(IncomeDisplayItem)
+    case payment(PaymentOccurrence)
+
+    var id: String {
+        switch self {
+        case .income(let income):
+            return "income-\(income.id)"
+        case .payment(let payment):
+            return "payment-\(payment.id)"
+        }
+    }
+
+    var date: Date {
+        switch self {
+        case .income(let income):
+            return income.date
+        case .payment(let payment):
+            return payment.dueDate
+        }
+    }
+
+    var amount: Decimal {
+        switch self {
+        case .income(let income):
+            return income.amount
+        case .payment(let payment):
+            return payment.amount
+        }
+    }
+}
+

@@ -47,7 +47,15 @@ struct AddAssetView: View {
                 Section("Varlık Türü") {
                     Picker("Varlık", selection: $selectedType) {
                         ForEach(AssetType.allCases) { type in
-                            Text(type.title).tag(type)
+                            Label {
+                                Text(type.title)
+                            } icon: {
+                                AssetIconView(
+                                    symbol: type.symbol,
+                                    size: 24
+                                )
+                            }
+                            .tag(type)
                         }
                     }
                     .disabled(asset != nil)
@@ -68,20 +76,25 @@ struct AddAssetView: View {
 
                 Section {
                     HStack(spacing: 12) {
-                        Image(systemName: selectedType.icon)
-                            .font(.title2)
-                            .foregroundStyle(.blue)
+
+                        AssetIconView(
+                            symbol: selectedType.symbol,
+                            size: 44
+                        )
 
                         VStack(alignment: .leading, spacing: 4) {
+
                             Text(selectedType.title)
-                                .font(.headline)
+                                .font(.custom("AvenirNext-DemiBold", size: 16))
 
                             Text(
-                                "Güncel TL karşılığı piyasa verileri " +
-                                "bağlandığında görüntülenecek."
+                                selectedType.symbol == "XAU" || selectedType.symbol == "XAG"
+                                    ? "Gram bazında güncel maden fiyatlarıyla hesaplanır."
+                                    : "Güncel döviz kuru üzerinden hesaplanır."
                             )
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     .padding(.vertical, 5)

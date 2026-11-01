@@ -178,16 +178,41 @@ struct AssetsView: View {
             }
 
             // TRY, USD ve EUR seçimi korunuyor.
-            Picker(
-                "Görüntüleme Para Birimi",
-                selection: $selectedCurrency
-            ) {
+            HStack(spacing: 4) {
                 ForEach(supportedCurrencies, id: \.self) { currency in
-                    Text(currency).tag(currency)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedCurrency = currency
+                        }
+                    } label: {
+                        Text(currency)
+                            .font(.custom("AvenirNext-DemiBold", size: 14))
+                            .foregroundStyle(
+                                selectedCurrency == currency
+                                ? AssetsColors.primaryGreen
+                                : Color.white
+                            )
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 40)
+                            .background {
+                                if selectedCurrency == currency {
+                                    Capsule()
+                                        .fill(Color.white)
+                                }
+                            }
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(
+                        selectedCurrency == currency ? .isSelected : []
+                    )
                 }
             }
-            .pickerStyle(.segmented)
-            .tint(AssetsColors.primaryGreen)
+            .padding(4)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(0.12))
+            )
 
             if viewModel.isLoading || viewModel.isLoadingMetals {
                 ProgressView("Fiyatlar güncelleniyor...")
@@ -360,14 +385,10 @@ struct AssetsView: View {
 
             // Şimdilik SF Symbol kullanıyoruz.
             // Sonrasında altın, gümüş ve döviz görsellerini Assets'e ekleyeceğiz.
-            Image(systemName: assetIcon(for: asset.symbol))
-                .font(.system(size: 19, weight: .semibold))
-                .foregroundStyle(assetIconColor(for: asset.symbol))
-                .frame(width: 40, height: 40)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(AssetsColors.lightGreen)
-                )
+            AssetIconView(
+                symbol: asset.symbol,
+                size: 40
+            )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(asset.name)
