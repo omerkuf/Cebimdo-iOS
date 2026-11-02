@@ -300,14 +300,16 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $showKalanChat) {
                 NavigationStack {
-                    KalanChatView()
-                        .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button("Kapat") {
-                                    showKalanChat = false
-                                }
+                    KalanChatView(
+                        assetsViewModel: assetsViewModel
+                    )
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Kapat") {
+                                showKalanChat = false
                             }
                         }
+                    }
                 }
             }
             .alert("Hata", isPresented: $showError) {

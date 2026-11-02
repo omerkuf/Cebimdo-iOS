@@ -14,12 +14,20 @@ enum ChatQuestionType: String, Codable {
     case remainingBudget = "remaining_budget"
     case topCategory = "top_category"
     case comparePreviousMonth = "compare_previous_month"
+
+    // Varlık sorguları
+    case portfolioTotal = "portfolio_total"
+    case assetValue = "asset_value"
+    case assetQuantity = "asset_quantity"
+    case assetList = "asset_list"
+
     case unsupported
 }
 
 struct ChatIntentResult: Decodable {
     let intent: ChatQuestionType
     let month: String
+    let assetSymbol: String?
 }
 
 struct ChatIntentRequest: Encodable {

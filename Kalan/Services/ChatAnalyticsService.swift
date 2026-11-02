@@ -110,8 +110,16 @@ struct ChatAnalyticsService {
 
             return "\(monthName) döneminde önceki aya göre \(currency(-difference)) daha az ödeme yapmışsın. Bu ay toplam ödemen \(currency(summary.paidPayments))."
 
+        case .portfolioTotal,
+             .assetValue,
+             .assetQuantity,
+             .assetList:
+
+            return "Varlık bilgileri ChatAssetService üzerinden hesaplanıyor."
+
         case .unsupported:
-            return "Şimdilik gelirlerini, ödemelerini, bütçeni, ödeme kategorilerini ve önceki ayla karşılaştırmanı inceleyebiliyorum."
+
+            return "Gelirlerini, ödemelerini, bütçeni ve varlıklarını inceleyebiliyorum."
         }
     }
 }

@@ -9,6 +9,7 @@ struct KalanChatView: View {
     @Query private var occurrences: [PaymentOccurrence]
     @Query private var incomeChanges: [IncomeAmountChange]
     @Query private var incomeOverrides: [IncomeOccurrenceOverride]
+    @Query private var assets: [AssetHolding]
 
     @State private var messages: [ChatMessage] = [
         ChatMessage(
@@ -21,6 +22,8 @@ struct KalanChatView: View {
     @State private var isLoading = false
 
     private let chatService = KalanChatService()
+    
+    @ObservedObject var assetsViewModel: AssetsViewModel
 
     private let green = Color(
         red: 15 / 255.0,
@@ -212,14 +215,32 @@ struct KalanChatView: View {
             do {
                 let intent = try await chatService.classify(text)
 
-                let answer = ChatAnalyticsService.answer(
-                    intent: intent,
-                    incomes: incomes,
-                    payments: payments,
-                    occurrences: occurrences,
-                    changes: incomeChanges,
-                    overrides: incomeOverrides
-                )
+                let answer: String
+
+                switch intent.intent {
+
+                case .portfolioTotal,
+                     .assetValue,
+                     .assetQuantity,
+                     .assetList:
+
+                    answer = ChatAssetService.answer(
+                        intent: intent,
+                        assets: assets,
+                        viewModel: assetsViewModel
+                    )
+
+                default:
+
+                    answer = ChatAnalyticsService.answer(
+                        intent: intent,
+                        incomes: incomes,
+                        payments: payments,
+                        occurrences: occurrences,
+                        changes: incomeChanges,
+                        overrides: incomeOverrides
+                    )
+                }
 
                 messages.append(
                     ChatMessage(role: .assistant, text: answer)
