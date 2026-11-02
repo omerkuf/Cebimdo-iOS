@@ -32,6 +32,8 @@ struct DashboardView: View {
     @State private var showError = false
     @State private var showSettings = false
     
+    @State private var showKalanChat = false
+    
     @AppStorage("salaryDay")
     private var salaryDay = 15
     
@@ -296,6 +298,18 @@ struct DashboardView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
+            .sheet(isPresented: $showKalanChat) {
+                NavigationStack {
+                    KalanChatView()
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("Kapat") {
+                                    showKalanChat = false
+                                }
+                            }
+                        }
+                }
+            }
             .alert("Hata", isPresented: $showError) {
                 Button("Tamam", role: .cancel) {}
             } message: {
@@ -323,6 +337,29 @@ struct DashboardView: View {
             }
 
             Spacer()
+            
+            Button {
+                showKalanChat = true
+            } label: {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(
+                        Color(red: 15 / 255.0,
+                              green: 122 / 255.0,
+                              blue: 67 / 255.0)
+                    )
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Circle()
+                            .fill(
+                                Color(red: 230 / 255.0,
+                                      green: 246 / 255.0,
+                                      blue: 237 / 255.0)
+                            )
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("KALAN Chat")
 
             Button {
                 showSettings = true
