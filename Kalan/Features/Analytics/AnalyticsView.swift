@@ -64,14 +64,30 @@ struct AnalyticsView: View {
                     monthSelector
 
                     summarySection
+                    
+                    categoryChart
 
                     incomePaymentChart
-
-                    categoryChart
                 }
                 .padding(16)
             }
-            .background(Color(.systemGroupedBackground))
+            .background {
+                ZStack {
+                    AnalyticsColors.background
+
+                    RadialGradient(
+                        colors: [
+                            Color(red: 0.86, green: 0.96, blue: 0.91),
+                            AnalyticsColors.background.opacity(0)
+                        ],
+                        center: .topTrailing,
+                        startRadius: 20,
+                        endRadius: 400
+                    )
+                }
+                .ignoresSafeArea()
+            }
+            .tint(AnalyticsColors.primaryGreen)
             .navigationTitle("Analizler")
         }
     }
@@ -94,7 +110,7 @@ struct AnalyticsView: View {
                         .locale(trLocale)
                 )
             )
-            .font(.headline)
+            .font(.custom("AvenirNext-DemiBold", size: 18))
 
             Spacer()
 
@@ -156,7 +172,7 @@ struct AnalyticsView: View {
         VStack(alignment: .leading, spacing: 16) {
 
             Text("Son 6 Ay")
-                .font(.headline)
+                .font(.custom("AvenirNext-DemiBold", size: 19))
 
             Text("Gelir ve planlanan ödemeler")
                 .font(.caption)
@@ -193,28 +209,39 @@ struct AnalyticsView: View {
                 }
             }
             .chartForegroundStyleScale([
-                "Gelir": Color.green,
-                "Ödeme": Color.orange
+                "Gelir": AnalyticsColors.primaryGreen,
+                "Ödeme": AnalyticsColors.accentGreen
             ])
             .chartYScale(domain: .automatic(includesZero: true))
             .frame(height: 240)
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(.secondarySystemGroupedBackground))
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
+        .shadow(
+            color: AnalyticsColors.primaryGreen.opacity(0.05),
+            radius: 10,
+            x: 0,
+            y: 4
         )
     }
 
     private var categoryChart: some View {
 
-        VStack(alignment: .leading, spacing: 16) {
+        let total = categoryData.reduce(Decimal.zero) {
+            $0 + $1.amount
+        }
+
+        return VStack(alignment: .leading, spacing: 18) {
 
             Text("Ödeme Kategorileri")
-                .font(.headline)
+                .font(.custom("AvenirNext-DemiBold", size: 19))
+                .foregroundStyle(.primary)
 
-            Text("Bu ay ödenmiş tutarların dağılımı")
-                .font(.caption)
+            Text("Seçilen ayın ödenmiş ödemeleri")
+                .font(.custom("AvenirNext-Regular", size: 13))
                 .foregroundStyle(.secondary)
 
             if categoryData.isEmpty {
@@ -226,43 +253,134 @@ struct AnalyticsView: View {
                         "Bu ay ödenmiş ödeme bulunmuyor."
                     )
                 )
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
 
             } else {
 
-                Chart(categoryData) { category in
-                    SectorMark(
-                        angle: .value(
-                            "Tutar",
-                            decimalToDouble(category.amount)
-                        ),
-                        innerRadius: .ratio(0.55),
-                        angularInset: 2
-                    )
-                    .foregroundStyle(
-                        by: .value("Kategori", category.name)
-                    )
+                ZStack {
+
+                    Chart {
+                        ForEach(categoryData.indices, id: \.self) { index in
+
+                            let category = categoryData[index]
+
+                            SectorMark(
+                                angle: .value(
+                                    "Tutar",
+                                    decimalToDouble(category.amount)
+                                ),
+                                innerRadius: .ratio(0.72),
+                                angularInset: 2
+                            )
+                            .foregroundStyle(categoryColor(at: index))
+                            .cornerRadius(4)
+                        }
+                    }
+                    .chartLegend(.hidden)
+                    .frame(height: 250)
+
+                    VStack(spacing: 5) {
+
+                        Text(formatCurrency(total))
+                            .font(.custom("AvenirNext-Bold", size: 22))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+
+                        Text("Aylık Harcama")
+                            .font(.custom("AvenirNext-Medium", size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: 175)
+                    .allowsHitTesting(false)
                 }
-                .frame(height: 240)
 
-                ForEach(categoryData) { category in
-                    HStack {
-                        Text(category.name)
-                            .font(.subheadline)
+                VStack(spacing: 0) {
 
-                        Spacer()
+                    ForEach(categoryData.indices, id: \.self) { index in
 
-                        Text(formatCurrency(category.amount))
-                            .font(.subheadline.weight(.medium))
+                        let category = categoryData[index]
+
+                        HStack(spacing: 10) {
+
+                            Circle()
+                                .fill(categoryColor(at: index))
+                                .frame(width: 12, height: 12)
+
+                            Text(category.name)
+                                .font(.custom("AvenirNext-Medium", size: 14))
+                                .foregroundStyle(.primary)
+                                .lineLimit(2)
+
+                            Spacer(minLength: 8)
+
+                            Text(
+                                categoryPercentage(
+                                    amount: category.amount,
+                                    total: total
+                                )
+                            )
+                            .font(.custom("AvenirNext-Medium", size: 13))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 48, alignment: .trailing)
+
+                            Text(formatCurrency(category.amount))
+                                .font(.custom("AvenirNext-DemiBold", size: 13))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                                .frame(
+                                    minWidth: 100,
+                                    alignment: .trailing
+                                )
+                        }
+                        .padding(.vertical, 13)
+
+                        if index < categoryData.count - 1 {
+                            Divider()
+                                .overlay(
+                                    AnalyticsColors.background
+                                )
+                        }
                     }
                 }
             }
         }
-        .padding(16)
+        .padding(18)
         .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(.secondarySystemGroupedBackground))
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
+        .shadow(
+            color: AnalyticsColors.primaryGreen.opacity(0.05),
+            radius: 10,
+            x: 0,
+            y: 4
         )
     }
+    
+    private func categoryColor(at index: Int) -> Color {
+        let palette = AnalyticsColors.categoryPalette
+        return palette[index % palette.count]
+    }
+
+    private func categoryPercentage(
+        amount: Decimal,
+        total: Decimal
+    ) -> String {
+
+        guard total > .zero else {
+            return "%0"
+        }
+
+        let percentage = (
+            decimalToDouble(amount) / decimalToDouble(total)
+        ) * 100
+
+        return String(format: "%%%0.1f", percentage)
+    }
+
 
     private func changeMonth(_ value: Int) {
         guard let next = calendar.date(

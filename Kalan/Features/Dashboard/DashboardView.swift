@@ -250,6 +250,8 @@ struct DashboardView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
 
+                    dashboardHeader
+
                     portfolioCard
 
                     summaryCards
@@ -258,7 +260,9 @@ struct DashboardView: View {
 
                     upcomingPaymentsSection
                 }
-                .padding(16)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+                .padding(.top, 12)
             }
             .background {
                 ZStack {
@@ -277,18 +281,7 @@ struct DashboardView: View {
                 .ignoresSafeArea()
             }
             .tint(DashboardColors.primaryGreen)
-            .navigationTitle("KALAN")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                    .accessibilityLabel("Ayarlar")
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear {
                 generatePayments()
             }
@@ -311,6 +304,43 @@ struct DashboardView: View {
         }
     }
     
+    private var dashboardHeader: some View {
+        HStack(spacing: 12) {
+
+            Image("KalanMark")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 38, height: 38)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("KALAN")
+                    .font(.custom("AvenirNext-Bold", size: 30))
+                    .foregroundStyle(.primary)
+
+                Text("Finansın kontrol altında")
+                    .font(.custom("AvenirNext-Medium", size: 12))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Button {
+                showSettings = true
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(.primary)
+                    .frame(width: 48, height: 48)
+                    .background(
+                        Circle()
+                            .fill(.white.opacity(0.9))
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Ayarlar")
+        }
+        .frame(maxWidth: .infinity)
+    }
 
     private var portfolioCard: some View {
 
