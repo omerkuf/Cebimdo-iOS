@@ -12,17 +12,28 @@ enum QuickAddError: LocalizedError {
     case invalidResponse
     case invalidResult
     case serviceUnavailable
+    case rateLimited
+    case invalidInput
 
     var errorDescription: String? {
         switch self {
         case .invalidURL:
             return "Hızlı Ekle servis adresi geçersiz."
+
         case .invalidResponse:
             return "Yapay zekâ yanıtı okunamadı."
+
         case .invalidResult:
-            return "İşlem bilgileri anlaşılamadı. Daha açık bir cümle deneyin."
+            return "İşlem bilgileri anlaşılamadı. Tutarı ve işlem adını daha açık yazın."
+
         case .serviceUnavailable:
-            return "Hızlı Ekle şu anda kullanılamıyor."
+            return "Hızlı Ekle şu anda kullanılamıyor. Tekrar deneyin."
+
+        case .rateLimited:
+            return "Çok fazla Hızlı Ekle isteği gönderildi. Biraz sonra tekrar deneyin."
+
+        case .invalidInput:
+            return "Lütfen geçerli bir işlem cümlesi girin."
         }
     }
 }
@@ -76,21 +87,19 @@ struct QuickAddService {
 
         guard (200...299).contains(httpResponse.statusCode) else {
 
-            let responseBody = String(
-                data: data,
-                encoding: .utf8
-            ) ?? "Yanıt okunamadı"
+            switch httpResponse.statusCode {
+            case 400, 413:
+                throw QuickAddError.invalidInput
 
-            print("========== QUICK ADD ERROR ==========")
-            print("HTTP Status:", httpResponse.statusCode)
-            print("Response:", responseBody)
-            print("=====================================")
-
-            if httpResponse.statusCode == 422 {
+            case 422:
                 throw QuickAddError.invalidResult
-            }
 
-            throw QuickAddError.serviceUnavailable
+            case 429:
+                throw QuickAddError.rateLimited
+
+            default:
+                throw QuickAddError.serviceUnavailable
+            }
         }
 
         return try JSONDecoder().decode(

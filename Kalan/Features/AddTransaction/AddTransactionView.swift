@@ -28,6 +28,8 @@ struct AddTransactionView: View {
     @State private var isAnalyzing = false
     @State private var quickAddError: String?
     @State private var showQuickAddSuccess = false
+    
+    @State private var aiSelectedTransactionType: Int?
 
     private let quickAddService = QuickAddService()
 
@@ -89,15 +91,24 @@ struct AddTransactionView: View {
                     .tint(primaryGreen)
                     .disabled(isAnalyzing)
                     .onChange(of: selectedType) { _, newValue in
+
+                        // Sekmeyi yapay zekâ değiştirdiyse
+                        // doldurulan alanları sıfırlama.
+                        if aiSelectedTransactionType == newValue {
+                            aiSelectedTransactionType = nil
+                            return
+                        }
+
+                        aiSelectedTransactionType = nil
+
                         category = newValue == 0 ? "Maaş" : "Fatura"
                         name = ""
                         amount = .zero
                         recurrence = .once
                         selectedDate = Date()
-                        
+
                         quickAddError = nil
                         showQuickAddSuccess = false
-                        
                     }
                 }
                 .listRowBackground(Color.clear)
@@ -406,20 +417,33 @@ struct AddTransactionView: View {
                 transactionType: selectedType
             )
 
-            let allowedCategories = categories
+            let detectedType: Int
 
-            guard allowedCategories.contains(result.category),
+            switch result.transactionType {
+            case "income":
+                detectedType = 0
+            case "payment":
+                detectedType = 1
+            default:
+                throw QuickAddError.invalidResult
+            }
+
+            let validCategories = detectedType == 0
+                ? incomeCategories
+                : paymentCategories
+
+            guard validCategories.contains(result.category),
                   result.amount > .zero,
                   result.amount <= Decimal(99_999_999)
-                      + Decimal(string: "0.99")!,
+                    + Decimal(string: "0.99")!,
                   !result.name.trimmingCharacters(
-                      in: .whitespacesAndNewlines
+                    in: .whitespacesAndNewlines
                   ).isEmpty,
-                  let selectedRecurrence = RecurrenceType(
-                      rawValue: result.recurrence
+                  let detectedRecurrence = RecurrenceType(
+                    rawValue: result.recurrence
                   ),
-                  selectedRecurrence == .once ||
-                      selectedRecurrence == .monthly else {
+                  detectedRecurrence == .once ||
+                    detectedRecurrence == .monthly else {
 
                 throw QuickAddError.invalidResult
             }
@@ -438,24 +462,51 @@ struct AddTransactionView: View {
 
                 guard let date = formatter.date(from: result.date),
                       formatter.string(from: date) == result.date else {
+
                     throw QuickAddError.invalidResult
                 }
 
                 parsedDate = date
             }
 
+            if selectedType != detectedType {
+                aiSelectedTransactionType = detectedType
+                selectedType = detectedType
+            }
+
             name = result.name
             amount = result.amount
             category = result.category
-            recurrence = selectedRecurrence
+            recurrence = detectedRecurrence
+            
+            if detectedRecurrence == .monthly,
+               Calendar.current.startOfDay(for: parsedDate)
+                < Calendar.current.startOfDay(for: Date()) {
+
+                throw QuickAddError.invalidResult
+            }
+
             selectedDate = parsedDate
 
             showQuickAddSuccess = true
 
-        } catch {
+        } catch let error as QuickAddError {
             quickAddError = error.localizedDescription
+
+        } catch let error as URLError {
+            if error.code == .notConnectedToInternet {
+                quickAddError = "İnternet bağlantısı bulunamadı."
+            } else if error.code == .timedOut {
+                quickAddError = "Yapay zekâ yanıt vermedi. Tekrar deneyin."
+            } else {
+                quickAddError = "Bağlantı hatası. Tekrar deneyin."
+            }
+
+        } catch {
+            quickAddError = "İşlem analiz edilemedi. Tekrar deneyin."
         }
     }
+
 
 
     private func saveTransaction() {

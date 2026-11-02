@@ -8,6 +8,7 @@
 import Foundation
 
 struct QuickAddResult: Decodable {
+    let transactionType: String
     let name: String
     let amount: Decimal
     let category: String
