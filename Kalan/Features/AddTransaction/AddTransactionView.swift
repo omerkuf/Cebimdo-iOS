@@ -23,6 +23,13 @@ struct AddTransactionView: View {
 
     @State private var showSuccess = false
     @State private var showError = false
+    
+    @State private var quickAddText = ""
+    @State private var isAnalyzing = false
+    @State private var quickAddError: String?
+    @State private var showQuickAddSuccess = false
+
+    private let quickAddService = QuickAddService()
 
     private let backgroundColor = Color(
         red: 240 / 255.0,
@@ -66,7 +73,12 @@ struct AddTransactionView: View {
     var body: some View {
         NavigationStack {
             Form {
-
+                
+                Section {
+                    quickAddSection
+                }
+                .listRowBackground(Color.white)
+                
                 Section {
                     Picker("İşlem Türü", selection: $selectedType) {
                         Text("Gelir Ekle").tag(0)
@@ -75,12 +87,17 @@ struct AddTransactionView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .tint(primaryGreen)
+                    .disabled(isAnalyzing)
                     .onChange(of: selectedType) { _, newValue in
                         category = newValue == 0 ? "Maaş" : "Fatura"
                         name = ""
                         amount = .zero
                         recurrence = .once
                         selectedDate = Date()
+                        
+                        quickAddError = nil
+                        showQuickAddSuccess = false
+                        
                     }
                 }
                 .listRowBackground(Color.clear)
@@ -229,6 +246,104 @@ struct AddTransactionView: View {
             .dismissKeyboardOnTap()
         }
     }
+    
+    
+    private var quickAddSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(primaryGreen)
+
+                Text("Hızlı Ekle")
+                    .font(.custom("AvenirNext-DemiBold", size: 18))
+            }
+
+            Text(
+                selectedType == 0
+                    ? "Gelirini bir cümleyle anlat, alanları dolduralım."
+                    : "Ödemeni bir cümleyle anlat, alanları dolduralım."
+            )
+            .font(.custom("AvenirNext-Regular", size: 13))
+            .foregroundStyle(.secondary)
+
+            TextField(
+                "Örn. Her ayın 5'inde 20.000 TL kira ödüyorum",
+                text: $quickAddText,
+                axis: .vertical
+            )
+            .font(.custom("AvenirNext-Regular", size: 14))
+            .lineLimit(2...4)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(backgroundColor)
+            )
+            .disabled(isAnalyzing)
+
+            Button {
+                Task {
+                    await analyzeQuickAdd()
+                }
+            } label: {
+                HStack(spacing: 8) {
+
+                    if isAnalyzing {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Image(systemName: "sparkles")
+                    }
+
+                    Text(
+                        isAnalyzing
+                            ? "Analiz Ediliyor..."
+                            : "Alanları Doldur"
+                    )
+                }
+                .font(.custom("AvenirNext-DemiBold", size: 15))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 46)
+                .background(
+                    Capsule()
+                        .fill(
+                            isAnalyzing || quickAddText
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                                .isEmpty
+                                ? Color.gray.opacity(0.45)
+                                : primaryGreen
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(
+                isAnalyzing ||
+                quickAddText
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .isEmpty
+            )
+
+            if let quickAddError {
+                Text(quickAddError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if showQuickAddSuccess {
+                Label(
+                    "Alanlar dolduruldu. Kontrol ederek kaydedebilirsin.",
+                    systemImage: "checkmark.circle.fill"
+                )
+                .font(.caption)
+                .foregroundStyle(primaryGreen)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
 
     private func recurrenceButton(
         title: String,
@@ -264,6 +379,84 @@ struct AddTransactionView: View {
             isSelected ? .isSelected : []
         )
     }
+    
+    
+    @MainActor
+    private func analyzeQuickAdd() async {
+
+        let text = quickAddText.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+
+        guard !text.isEmpty, !isAnalyzing else {
+            return
+        }
+
+        isAnalyzing = true
+        quickAddError = nil
+        showQuickAddSuccess = false
+
+        defer {
+            isAnalyzing = false
+        }
+
+        do {
+            let result = try await quickAddService.analyze(
+                text: text,
+                transactionType: selectedType
+            )
+
+            let allowedCategories = categories
+
+            guard allowedCategories.contains(result.category),
+                  result.amount > .zero,
+                  result.amount <= Decimal(99_999_999)
+                      + Decimal(string: "0.99")!,
+                  !result.name.trimmingCharacters(
+                      in: .whitespacesAndNewlines
+                  ).isEmpty,
+                  let selectedRecurrence = RecurrenceType(
+                      rawValue: result.recurrence
+                  ),
+                  selectedRecurrence == .once ||
+                      selectedRecurrence == .monthly else {
+
+                throw QuickAddError.invalidResult
+            }
+
+            let parsedDate: Date
+
+            if result.date.isEmpty {
+                parsedDate = Date()
+            } else {
+                let formatter = DateFormatter()
+                formatter.calendar = Calendar(identifier: .gregorian)
+                formatter.locale = Locale(identifier: "en_US_POSIX")
+                formatter.timeZone = TimeZone(identifier: "Europe/Istanbul")
+                formatter.dateFormat = "yyyy-MM-dd"
+                formatter.isLenient = false
+
+                guard let date = formatter.date(from: result.date),
+                      formatter.string(from: date) == result.date else {
+                    throw QuickAddError.invalidResult
+                }
+
+                parsedDate = date
+            }
+
+            name = result.name
+            amount = result.amount
+            category = result.category
+            recurrence = selectedRecurrence
+            selectedDate = parsedDate
+
+            showQuickAddSuccess = true
+
+        } catch {
+            quickAddError = error.localizedDescription
+        }
+    }
+
 
     private func saveTransaction() {
 
@@ -320,5 +513,9 @@ struct AddTransactionView: View {
         category = selectedType == 0 ? "Maaş" : "Fatura"
         selectedDate = Date()
         recurrence = .once
+
+        quickAddText = ""
+        quickAddError = nil
+        showQuickAddSuccess = false
     }
 }
