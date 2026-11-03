@@ -75,7 +75,8 @@ struct SettingsView: View {
                         Text("Euro (EUR)").tag("EUR")
                     }
                 }
-
+                
+                /*
                 Section("Görünüm") {
                     Picker("Tema", selection: $appearance) {
                         ForEach(AppAppearance.allCases) { option in
@@ -84,6 +85,7 @@ struct SettingsView: View {
                         }
                     }
                 }
+                */
 
                 Section("Uygulama") {
                     LabeledContent("Uygulama", value: "KALAN")

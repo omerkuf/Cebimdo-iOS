@@ -80,6 +80,10 @@ struct AssetsView: View {
                 VStack(alignment: .leading, spacing: 20) {
 
                     portfolioSummary
+                    
+                    MarketPricesCard(
+                        assetsViewModel: viewModel
+                    )
 
                     if assets.isEmpty {
                         emptyState
@@ -109,6 +113,11 @@ struct AssetsView: View {
             .background(AssetsColors.background.ignoresSafeArea())
             .tint(AssetsColors.primaryGreen)
             .navigationTitle("Varlıklarım")
+            .task {
+                await viewModel.refreshIfNeeded(
+                    needsMetals: true
+                )
+            }
             .sheet(isPresented: $showAddAsset) {
                 AddAssetView()
             }
@@ -237,9 +246,7 @@ struct AssetsView: View {
                 Button {
                     Task {
                         await viewModel.refreshIfNeeded(
-                            needsMetals: assets.contains {
-                                $0.symbol == "XAU" || $0.symbol == "XAG"
-                            },
+                            needsMetals: true,
                             force: true
                         )
                     }

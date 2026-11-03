@@ -321,65 +321,129 @@ struct DashboardView: View {
     }
     
     private var dashboardHeader: some View {
-        HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
 
-            Image("KalanMark")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 38, height: 38)
+            HStack(spacing: 12) {
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("KALAN")
-                    .font(.custom("AvenirNext-Bold", size: 30))
-                    .foregroundStyle(.primary)
+                Image("KalanMark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 38, height: 38)
 
-                Text("Finansın kontrol altında")
-                    .font(.custom("AvenirNext-Medium", size: 12))
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("KALAN")
+                        .font(.custom("AvenirNext-Bold", size: 30))
+                        .foregroundStyle(.primary)
+
+                    Text("Finansın kontrol altında")
+                        .font(.custom("AvenirNext-Medium", size: 12))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 4)
+
+                Button {
+                    showKalanChat = true
+                } label: {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 21, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 48, height: 48)
+                        .background(
+                            Circle()
+                                .fill(DashboardColors.primaryGreen)
+                        )
+                        .shadow(
+                            color: DashboardColors.primaryGreen.opacity(0.20),
+                            radius: 8,
+                            x: 0,
+                            y: 4
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("KALAN Chat")
+
+                Button {
+                    showSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .frame(width: 48, height: 48)
+                        .background(
+                            Circle()
+                                .fill(.white.opacity(0.9))
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Ayarlar")
             }
 
-            Spacer()
-            
             Button {
                 showKalanChat = true
             } label: {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(
-                        Color(red: 15 / 255.0,
-                              green: 122 / 255.0,
-                              blue: 67 / 255.0)
-                    )
-                    .frame(width: 44, height: 44)
-                    .background(
-                        Circle()
-                            .fill(
-                                Color(red: 230 / 255.0,
-                                      green: 246 / 255.0,
-                                      blue: 237 / 255.0)
-                            )
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("KALAN Chat")
+                HStack(spacing: 12) {
 
-            Button {
-                showSettings = true
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .frame(width: 48, height: 48)
-                    .background(
-                        Circle()
-                            .fill(.white.opacity(0.9))
+                    Image(systemName: "bubble.left.and.text.bubble.right.fill")
+                        .font(.system(size: 21))
+                        .foregroundStyle(DashboardColors.primaryGreen)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill(DashboardColors.lightGreen)
+                        )
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("KALAN Chat'a sordun mu?")
+                            .font(.custom("AvenirNext-DemiBold", size: 14))
+                            .foregroundStyle(.primary)
+
+                        Text("Gelirini, ödemelerini ve bütçeni hemen öğren.")
+                            .font(.custom("AvenirNext-Regular", size: 12))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(
+                                horizontal: false,
+                                vertical: true
+                            )
+                    }
+
+                    Spacer(minLength: 4)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(DashboardColors.primaryGreen)
+                }
+                .padding(12)
+                .background(
+                    RoundedRectangle(
+                        cornerRadius: 16,
+                        style: .continuous
                     )
+                    .fill(.white.opacity(0.95))
+                )
+                .overlay(
+                    RoundedRectangle(
+                        cornerRadius: 16,
+                        style: .continuous
+                    )
+                    .stroke(
+                        DashboardColors.primaryGreen.opacity(0.12),
+                        lineWidth: 1
+                    )
+                )
+                .shadow(
+                    color: DashboardColors.primaryGreen.opacity(0.06),
+                    radius: 8,
+                    x: 0,
+                    y: 4
+                )
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Ayarlar")
+            .accessibilityLabel("KALAN Chat'i aç")
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
+
 
     private var portfolioCard: some View {
 
@@ -530,7 +594,7 @@ struct DashboardView: View {
                 amount: dailyLimit,
                 icon: "calendar",
                 color: .green,
-                subtitle: "Tahmini · sonraki maaşa kadar"
+                subtitle: "Günlük sınırım\nsonraki maaşa kadar"
             )
         }
     }
@@ -699,7 +763,7 @@ struct DashboardView: View {
             Button {
                 togglePayment(occurrence)
             } label: {
-                Text("Ödendi")
+                Text("Öde")
                     .font(.caption.weight(.semibold))
             }
             .buttonStyle(.borderedProminent)

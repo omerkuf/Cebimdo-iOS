@@ -21,9 +21,7 @@ struct KalanApp: App {
                 }
             }
             .font(KalanFont.body)
-            .preferredColorScheme(
-                AppAppearance(rawValue: appearance)?.colorScheme
-            )
+            .preferredColorScheme(.light)
             .task {
                 guard isShowingSplash else { return }
 

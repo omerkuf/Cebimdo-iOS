@@ -42,9 +42,12 @@ struct SummaryCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(subtitle)
-                .font(.caption2)
+                .font(.custom("AvenirNext-Regular", size: 14))
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
