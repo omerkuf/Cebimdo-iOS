@@ -10,7 +10,7 @@ import Lottie
 
 struct SplashView: View {
     @State private var visibleLetters = 0
-    private let letters = Array("KALAN")
+    private let letters = Array("Cebimdo")
 
     var body: some View {
         VStack {

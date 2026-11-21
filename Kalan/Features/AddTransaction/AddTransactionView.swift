@@ -391,6 +391,80 @@ struct AddTransactionView: View {
         )
     }
     
+    // Kullanıcı belirli bir başlangıç dönemi belirtmiş mi?
+    private func hasExplicitDateReference(_ text: String) -> Bool {
+        let normalized = text.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: Locale(identifier: "tr_TR")
+        )
+
+        let dateWords = [
+            "ocak", "subat", "mart", "nisan", "mayis", "haziran",
+            "temmuz", "agustos", "eylul", "ekim", "kasim", "aralik",
+            "gelecek ay", "onumuzdeki ay", "sonraki ay",
+            "bu ay", "gecen ay", "yarin", "bugun", "itibaren"
+        ]
+
+        if dateWords.contains(where: { normalized.contains($0) }) {
+            return true
+        }
+
+        // 01.12.2026, 01/12/2026, 2026-12-01 gibi tarihleri koru.
+        let patterns = [
+            #"\b\d{1,2}[./-]\d{1,2}([./-]\d{2,4})?\b"#,
+            #"\b\d{4}[./-]\d{1,2}[./-]\d{1,2}\b"#,
+            #"\b20\d{2}\b"#
+        ]
+
+        return patterns.contains {
+            normalized.range(
+                of: $0,
+                options: .regularExpression
+            ) != nil
+        }
+    }
+
+    // Başlangıç ayı belirtilmeyen düzenli gelirleri
+    // içinde bulunduğumuz aydan başlat.
+    private func normalizedQuickAddDate(
+        _ parsedDate: Date,
+        recurrence: RecurrenceType,
+        transactionType: Int,
+        originalText: String
+    ) -> Date {
+        guard transactionType == 0,
+              recurrence == .monthly,
+              !hasExplicitDateReference(originalText) else {
+            return parsedDate
+        }
+
+        let calendar = Calendar.current
+
+        guard let currentMonth = calendar.dateInterval(
+            of: .month,
+            for: Date()
+        ) else {
+            return parsedDate
+        }
+
+        let day = calendar.component(.day, from: parsedDate)
+
+        guard let dayRange = calendar.range(
+            of: .day,
+            in: .month,
+            for: currentMonth.start
+        ),
+        let date = calendar.date(
+            byAdding: .day,
+            value: min(day, dayRange.count) - 1,
+            to: currentMonth.start
+        ) else {
+            return parsedDate
+        }
+
+        return date
+    }
+    
     
     @MainActor
     private func analyzeQuickAdd() async {
@@ -479,14 +553,15 @@ struct AddTransactionView: View {
             category = result.category
             recurrence = detectedRecurrence
             
-            if detectedRecurrence == .monthly,
-               Calendar.current.startOfDay(for: parsedDate)
-                < Calendar.current.startOfDay(for: Date()) {
-
-                throw QuickAddError.invalidResult
-            }
-
-            selectedDate = parsedDate
+            // Yapay zekâdan gelen başlangıç tarihini düzenle.
+            // Açık başlangıç dönemi olmayan aylık gelirler
+            // mevcut ayın ilgili gününden başlar.
+            selectedDate = normalizedQuickAddDate(
+                parsedDate,
+                recurrence: detectedRecurrence,
+                transactionType: detectedType,
+                originalText: text
+            )
 
             showQuickAddSuccess = true
 

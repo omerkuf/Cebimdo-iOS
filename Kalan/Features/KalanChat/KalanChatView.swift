@@ -14,7 +14,7 @@ struct KalanChatView: View {
     @State private var messages: [ChatMessage] = [
         ChatMessage(
             role: .assistant,
-            text: "Merhaba! Ben KALAN Chat. Gelirlerin, ödemelerin ve bütçen hakkında sorular sorabilirsin."
+            text: "Merhaba! Ben Cebimdo Chat. Gelirlerin, ödemelerin ve bütçen hakkında sorular sorabilirsin."
         )
     ]
 
@@ -63,7 +63,7 @@ struct KalanChatView: View {
                         if isLoading {
                             HStack(spacing: 8) {
                                 ProgressView()
-                                Text("KALAN düşünüyor...")
+                                Text("Cebimdo düşünüyor...")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -87,7 +87,7 @@ struct KalanChatView: View {
             inputBar
         }
         .background(background.ignoresSafeArea())
-        .navigationTitle("KALAN Chat")
+        .navigationTitle("Cebimdo Chat")
         .navigationBarTitleDisplayMode(.inline)
         .tint(green)
     }
@@ -247,7 +247,7 @@ struct KalanChatView: View {
                 )
 
             } catch {
-                print("KALAN CHAT ERROR:", error)
+                print("Cebimdo CHAT ERROR:", error)
 
                 messages.append(
                     ChatMessage(

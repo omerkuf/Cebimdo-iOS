@@ -21,7 +21,7 @@ enum KalanChatError: LocalizedError {
         case .invalidResponse:
             return "Yapay zekâ yanıtı okunamadı."
         case .serviceUnavailable:
-            return "KALAN Chat şu anda kullanılamıyor."
+            return "Cebimdo Chat şu anda kullanılamıyor."
         case .invalidQuestion:
             return "Soruyu anlayamadım. Daha açık yazmayı deneyebilirsin."
         case .rateLimited:
@@ -76,7 +76,7 @@ struct KalanChatService {
                 encoding: .utf8
             ) ?? "Yanıt okunamadı"
 
-            print("========== KALAN CHAT ERROR ==========")
+            print("========== Cebimdo CHAT ERROR ==========")
             print("HTTP Status:", response.statusCode)
             print("Response:", responseBody)
             print("======================================")

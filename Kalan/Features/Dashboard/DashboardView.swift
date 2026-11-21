@@ -325,13 +325,13 @@ struct DashboardView: View {
 
             HStack(spacing: 12) {
 
-                Image("KalanMark")
+                Image("CebimdoMark")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 38, height: 38)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("KALAN")
+                    Text("Cebimdo")
                         .font(.custom("AvenirNext-Bold", size: 30))
                         .foregroundStyle(.primary)
 
@@ -361,7 +361,7 @@ struct DashboardView: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("KALAN Chat")
+                .accessibilityLabel("Cebimdo Chat")
 
                 Button {
                     showSettings = true
@@ -394,7 +394,7 @@ struct DashboardView: View {
                         )
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("KALAN Chat'a sordun mu?")
+                        Text("Cebimdo Chat'a sordun mu?")
                             .font(.custom("AvenirNext-DemiBold", size: 14))
                             .foregroundStyle(.primary)
 
@@ -439,7 +439,7 @@ struct DashboardView: View {
                 )
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("KALAN Chat'i aç")
+            .accessibilityLabel("Cebimdo Chat'i aç")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

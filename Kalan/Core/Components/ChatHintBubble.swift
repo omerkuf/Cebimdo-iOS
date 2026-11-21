@@ -10,7 +10,7 @@ import SwiftUI
 struct ChatHintBubble: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("KALAN Chat'a sordun mu?")
+            Text("Cebimdo Chat'a sordun mu?")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.primary)
 

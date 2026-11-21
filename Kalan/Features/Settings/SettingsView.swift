@@ -35,7 +35,7 @@ struct SettingsView: View {
                 context: modelContext
             )
 
-            print("KALAN: Tüm SwiftData kayıtları silindi.")
+            print("Cebimdo: Tüm SwiftData kayıtları silindi.")
 
         } catch {
             modelContext.rollback()
@@ -88,7 +88,7 @@ struct SettingsView: View {
                 */
 
                 Section("Uygulama") {
-                    LabeledContent("Uygulama", value: "KALAN")
+                    LabeledContent("Uygulama", value: "Cebimdo")
                     LabeledContent("Sürüm", value: "1.0")
                 }
                 
